@@ -5,7 +5,7 @@ import (
 )
 
 func TestGenModel(t *testing.T) {
-	dsn := "root:Daoway_Mysql_iO12@tcp(analysis.daoway.cn:3306)/daowei?charset=utf8mb4&parseTime=true&loc=Local"
+	dsn := "root:Daoway_Mysql_iO12@tcp(localhost:3306)/daowei?charset=utf8mb4&parseTime=true&loc=Local"
 	var tables = []Module{
 		{
 			TableName:  "s_tech_info",
