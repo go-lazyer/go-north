@@ -1,0 +1,195 @@
+// Create by code generator  {{.CreateTime}}
+package dao
+
+import (
+	"lazyer/library/database/gdb"
+	"lazyer/library/generator/gsql"
+	"lazyer/library/logger"
+	"{{.ModelPackagePath}}"
+
+	"github.com/pkg/errors"
+)
+
+func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} interface{}  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
+	{{ if eq (len .PrimaryKeyFields) 1 -}} 
+	gen := gsql.NewGenerator().From(model.TABLE_NAME).Where(gsql.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}}))
+	{{ else -}}
+	query := gsql.NewBoolQuery(){{range $field := .PrimaryKeyFields}} .And(gsql.NewEqualQuery(model.{{ .ColumnNameUpper }}, {{ .ColumnNameLowerCamel }})) {{end}}
+	gen := gsql.NewGenerator().From(model.TABLE_NAME).Where(query)
+	{{ end -}}
+	sql, params, err := gen.SelectSql(true)
+	if err != nil {
+		err = errors.WithStack(err)
+		logger.Error.Printf("%+v", err)
+		return nil,err
+	}
+	var {{.TableNameLowerCamel}} model.{{.TableNameUpperCamel}}Model
+	err = gdb.PrepareFirst(sql, params, &{{.TableNameLowerCamel}})
+	if err != nil {
+		err = errors.WithStack(err)
+		logger.Error.Printf("%+v", err)
+		return nil,err
+	}
+	if {{.TableNameLowerCamel}}.{{(index .PrimaryKeyFields 0).FieldName}}.{{(index .PrimaryKeyFields 0).FieldNullTypeValue}} == {{(index .PrimaryKeyFields 0).FieldTypeDefault}} {
+		return nil,nil
+	}
+	return &{{.TableNameLowerCamel}},nil
+}
+{{if eq (len .PrimaryKeyFields) 1}} 
+func QueryMapByPrimaryKeys(primaryKeys []interface{}) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
+	gen := gsql.NewGenerator().From(model.TABLE_NAME).Where(gsql.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, primaryKeys))
+	sql, param, err := gen.SelectSql(true)
+	if err == nil {
+		err = errors.WithStack(err)
+		logger.Error.Printf("%+v", err)
+		return nil,err
+	}
+	{{.TableNameLowerCamel}}s := make([]model.{{.TableNameUpperCamel}}Model, 0)
+	err = gdb.PrepareQuery(sql, param, &{{.TableNameLowerCamel}}s)
+	if err == nil {
+		err = errors.WithStack(err)
+		logger.Error.Printf("%+v", err)
+		return nil,err
+	}
+	if {{.TableNameLowerCamel}}s == nil || len({{.TableNameLowerCamel}}s) == 0 {
+		return nil,nil
+	}
+	{{.TableNameLowerCamel}}Map := make(map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, len({{.TableNameLowerCamel}}s))
+	for _, {{.TableNameLowerCamel}} := range {{.TableNameLowerCamel}}s {
+		{{.TableNameLowerCamel}}Map[{{.TableNameLowerCamel}}.{{(index .PrimaryKeyFields 0).FieldName}}.{{(index .PrimaryKeyFields 0).FieldNullTypeValue}}] = {{.TableNameLowerCamel}}
+	}
+	return {{.TableNameLowerCamel}}Map,nil
+}
+{{end}}
+
+
+func CountByGsql(gen *gsql.Generator) (int64, error) {
+	sql, params, err := gen.CountSql(true)
+	if err != nil {
+		err = errors.WithStack(err)
+		logger.Error.Printf("%+v", err)
+		return 0,err
+	}
+	count, err := gdb.PrepareCount(sql, params)
+	if err != nil {
+		err = errors.WithStack(err)
+		logger.Error.Printf("%+v", err)
+		return 0,err
+	}
+	return count,nil
+}
+
+// 通过gsql 查询
+func QueryByGsql(gen *gsql.Generator) ([]model.{{.TableNameUpperCamel}}Model, error) {
+	sql, params, err := gen.SelectSql(true)
+	if err != nil {
+		err = errors.WithStack(err)
+		logger.Error.Printf("%+v", err)
+		return nil,err
+	}
+	{{.TableNameLowerCamel}}s := make([]model.{{.TableNameUpperCamel}}Model, 0)
+	err = gdb.PrepareQuery(sql, params, &{{.TableNameLowerCamel}}s)
+	if err != nil {
+		err = errors.WithStack(err)
+		logger.Error.Printf("%+v", err)
+		return nil,err
+	}
+	return {{.TableNameLowerCamel}}s,nil
+}
+
+// 通过gsql 查询 第一条
+func QueryFirstByGsql(gen *gsql.Generator) (*model.{{.TableNameUpperCamel}}Model, error) {
+	sql, params, err := gen.SelectSql(true)
+	if err != nil {
+		err = errors.WithStack(err)
+		logger.Error.Printf("%+v", err)
+		return nil,err
+	}
+	var {{.TableNameLowerCamel}} model.{{.TableNameUpperCamel}}Model
+	err = gdb.PrepareFirst(sql, params, &{{.TableNameLowerCamel}})
+	if err != nil {
+		err = errors.WithStack(err)
+		logger.Error.Printf("%+v", err)
+		return nil,err
+	}
+	if {{.TableNameLowerCamel}}.{{(index .PrimaryKeyFields 0).FieldName}}.{{(index .PrimaryKeyFields 0).FieldNullTypeValue}} == {{(index .PrimaryKeyFields 0).FieldTypeDefault}} {
+		return nil,nil
+	}
+	return &{{.TableNameLowerCamel}},nil
+}
+
+
+// 通过gsql 查询
+func QueryExtendByGsql(gen *gsql.Generator) ([]model.{{.TableNameUpperCamel}}Extend, error) {
+	sql, params, err := gen.SelectSql(true)
+	if err != nil {
+		err = errors.WithStack(err)
+		logger.Error.Printf("%+v", err)
+		return nil,err
+	}
+	{{.TableNameLowerCamel}}Extends := make([]model.{{.TableNameUpperCamel}}Extend, 0)
+	err = gdb.PrepareQuery(sql, params, &{{.TableNameLowerCamel}}Extends)
+	if err != nil {
+		err = errors.WithStack(err)
+		logger.Error.Printf("%+v", err)
+		return nil,err
+	}
+	return {{.TableNameLowerCamel}}Extends,nil
+}
+
+func Insert({{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model) (int64, error) {
+	sql, params, err := {{.TableNameLowerCamel}}.InsertSql()
+	if err != nil {
+		err = errors.WithStack(err)
+		logger.Error.Printf("%+v", err)
+		return 0,err
+	}
+	id, err := gdb.PrepareInsert(sql, params)
+	if err != nil {
+		err = errors.WithStack(err)
+		logger.Error.Printf("%+v", err)
+		return 0,err
+	}
+	return id,nil
+}
+func Update({{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model) (int64, error) {
+	sql, param, err := {{.TableNameLowerCamel}}.UpdateSql()
+	if err != nil {
+		logger.Error.Printf("%+v", err)
+		return 0,err
+	}
+	count, err := gdb.PrepareUpdate(sql, param)
+	if err != nil {
+		err = errors.WithStack(err)
+		logger.Error.Printf("%+v", err)
+		return 0,err
+	}
+	return count,nil
+}
+func UpdateBySelective({{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model) (int64, error) {
+	sql, param, err := {{.TableNameLowerCamel}}.UpdateSqlBySelective()
+	if err != nil {
+		err = errors.WithStack(err)
+		logger.Error.Printf("%+v", err)
+		return 0,err
+	}
+	count, err := gdb.PrepareUpdate(sql, param)
+	if err != nil {
+		err = errors.WithStack(err)
+		logger.Error.Printf("%+v", err)
+		return 0,err
+	}
+	return count,nil
+}
+
+
+// 通过gsql修改
+func UpdateBySql(sql string, params []interface{}) (int64, error) {
+	count, err := gdb.PrepareUpdate(sql, params)
+	if err != nil {
+		err = errors.WithStack(err)
+		logger.Error.Printf("%+v", err)
+		return 0, err
+	}
+	return count, nil
+}

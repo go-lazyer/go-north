@@ -1,0 +1,15 @@
+// Create by code generator  {{.CreateTime}}
+package controller
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
+func Index(g *gin.Context) {
+	data := gin.H{
+		"code": 200,
+	}
+	g.JSON(http.StatusOK, data)
+}

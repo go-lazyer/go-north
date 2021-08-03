@@ -1,0 +1,101 @@
+// Create by code generator  {{.CreateTime}}
+package model
+
+import (
+	"bytes"
+	"database/sql"
+	"errors"
+)
+
+const (
+	{{range $field := .Fields}}
+		{{- .ColumnNameUpper -}}  ="{{ .ColumnName }}" // {{ .Comment }}
+	{{end}}
+	TABLE_NAME  = "{{ .TableName }}" // 表名
+)
+
+type {{.TableNameUpperCamel}}Model struct {
+	{{range $field := .Fields}}{{ .FieldName }}  {{ .FieldNullType }} `{{ .FieldOrmTag }} {{ .FieldDefaultTag }}` // {{ .Comment }}
+	{{end}}
+}
+
+
+func (m *{{.TableNameUpperCamel}}Model) UpdateSql() (string, []interface{}, error) {
+	{{range $field := .Fields}}
+		{{if eq .IsPrimaryKey 1}}
+		if !m.{{ .FieldName }}.Valid {
+			return "", nil, errors.New("{{ .FieldName }} is not null")
+	}{{end}}{{end}}
+
+	params := make([]interface{}, 0, {{len .Fields}})
+	var sql bytes.Buffer
+	sql.WriteString("update `{{.TableName}}` " ){{$n := 0}}
+	sql.WriteString("set {{range $i,$field := .Fields}}{{if ne $field.IsPrimaryKey 1}}{{if ne $n  0}},{{end}}{{$n = $i}}`{{$field.ColumnName}}` = ?{{end}}{{end}} "){{$n = -1}}
+
+	{{range $field := .Fields}}{{if ne $field.IsPrimaryKey 1}}
+	{{.ColumnNameLowerCamel}}V, err := m.{{ .FieldName }}.Value()
+	if {{.ColumnNameLowerCamel}}V ==nil || err != nil {
+		params = append(params, {{if .ColumnDefault.Valid}}"{{.ColumnDefault.String}}"{{else}}nil{{end}})
+	} else {
+		params = append(params, {{.ColumnNameLowerCamel}}V)
+	}
+	{{end}}{{end}}	{{$n = -1}}
+
+
+	sql.WriteString(" where  {{range $i,$field := .Fields}}{{if eq $field.IsPrimaryKey 1}}{{if ne $n  -1}} and {{end}}{{$n = $i}}`{{$field.ColumnName}}` = ?{{end}}{{end}} "){{$n = -1}}
+	params = append(params {{range $i,$field := .Fields}}{{if eq $field.IsPrimaryKey 1}},m.{{$field.FieldName}}.{{.FieldNullTypeValue}}{{end}}{{end}})
+	return sql.String(), params, nil
+}
+
+func (m *{{.TableNameUpperCamel}}Model) UpdateSqlBySelective() (string, []interface{}, error) {
+	{{range $field := .Fields}}{{if eq .IsPrimaryKey 1}} if !m.{{ .FieldName }}.Valid {
+		return "", nil, errors.New("{{ .FieldName }} is not null")
+	}{{end}}
+	{{end}}
+
+	params := make([]interface{}, 0, {{len .Fields}})
+	var sql bytes.Buffer
+	sql.WriteString("update `{{.TableName}}` " )
+
+	sql.WriteString(" set "){{$n := -1}}
+	{{range $i,$field := .Fields}}
+		{{if eq .IsPrimaryKey 1}}
+			if m.{{$field.FieldName}}.Valid {
+				sql.WriteString("{{if ne $n  -1}},{{end}} `{{$field.ColumnName}}` = ? "){{$n = $i}}
+				params = append(params, m.{{$field.FieldName}}.{{.FieldNullTypeValue}})
+			}
+		{{else}}
+			if m.{{$field.FieldName}}.Valid {
+				sql.WriteString(", `{{$field.ColumnName}}` = ? "){{$n = $i}}
+				params = append(params, m.{{$field.FieldName}}.{{.FieldNullTypeValue}})
+			}
+		{{end}}
+	{{end}}
+	
+	{{$n = -1}}
+	sql.WriteString(" where  {{range $i,$field := .PrimaryKeyFields}}{{if ne $n  -1}} and {{end}}{{$n = $i}}`{{$field.ColumnName}}` = ?{{end}} ")
+	
+	{{$n = -1}}
+	params = append(params {{range $i,$field := .PrimaryKeyFields}},m.{{$field.FieldName}}.{{.FieldNullTypeValue}}{{end}})
+	return sql.String(), params, nil
+}
+
+
+func (m *{{.TableNameUpperCamel}}Model) InsertSql() (string, []interface{}, error) {
+	params := make([]interface{}, 0, {{len .Fields}})
+	var sql bytes.Buffer
+	sql.WriteString("insert into `{{.TableName}}` ")
+	sql.WriteString(" ({{range $i,$field := .Fields}} {{if ne $i 0}},{{end}}`{{$field.ColumnName}}`{{end}})")
+	sql.WriteString("values ({{range $i,$field := .Fields}} {{if ne $i 0}},{{end}}?{{end}})")
+	
+	{{range $field := .Fields}}
+	{{.ColumnNameLowerCamel}}V, err := m.{{ .FieldName }}.Value()
+	if {{.ColumnNameLowerCamel}}V ==nil || err != nil {
+		params = append(params, {{if .ColumnDefault.Valid}}"{{.ColumnDefault.String}}"{{else}}nil{{end}})
+	} else {
+		params = append(params, {{.ColumnNameLowerCamel}}V)
+	}
+	{{end}}	
+	
+	return sql.String(), params, nil
+}
