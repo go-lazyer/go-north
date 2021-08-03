@@ -3,7 +3,6 @@ package generator
 import (
 	"bytes"
 	"fmt"
-	"go-generator/util"
 )
 
 type Query interface {
@@ -49,7 +48,7 @@ func (q *BetweenQuery) Source(table string, prepare bool) (string, []interface{}
 	if prepare {
 		return fmt.Sprintf("%s.%s between ? and ?", table, q.field), param, nil
 	}
-	if util.IsNumberType(q.firstValue) {
+	if IsNumberType(q.firstValue) {
 		return fmt.Sprintf("%s.%s between %v and %v", table, q.field, q.firstValue, q.secondValue), param, nil
 	} else {
 		return fmt.Sprintf("%s.%s between '%v' and '%v' ", table, q.field, q.firstValue, q.secondValue), param, nil
@@ -71,7 +70,7 @@ func (q *NotBetweenQuery) Source(table string, prepare bool) (string, []interfac
 	if prepare {
 		return fmt.Sprintf("%s.%s not between ? and ?", table, q.field), param, nil
 	}
-	if util.IsNumberType(q.firstValue) {
+	if IsNumberType(q.firstValue) {
 		return fmt.Sprintf("%s.%s not between %v and %v", table, q.field, q.firstValue, q.secondValue), param, nil
 	} else {
 		return fmt.Sprintf("%s.%s not between '%v' and '%v' ", table, q.field, q.firstValue, q.secondValue), param, nil
@@ -91,7 +90,7 @@ func (q *EqualQuery) Source(table string, prepare bool) (string, []interface{}, 
 	if prepare {
 		return fmt.Sprintf("%s.%s = ?", table, q.field), []interface{}{q.value}, nil
 	}
-	if util.IsNumberType(q.value) {
+	if IsNumberType(q.value) {
 		return fmt.Sprintf("%s.%s = %v", table, q.field, q.value), []interface{}{q.value}, nil
 	} else {
 		return fmt.Sprintf("%s.%s = '%v'", table, q.field, q.value), []interface{}{q.value}, nil
@@ -111,7 +110,7 @@ func (q *NotEqualQuery) Source(table string, prepare bool) (string, []interface{
 	if prepare {
 		return fmt.Sprintf("%s.%s != ?", table, q.field), []interface{}{q.value}, nil
 	}
-	if util.IsNumberType(q.value) {
+	if IsNumberType(q.value) {
 		return fmt.Sprintf("%s.%s != %v", table, q.field, q.value), []interface{}{q.value}, nil
 	} else {
 		return fmt.Sprintf("%s.%s != '%v'", table, q.field, q.value), []interface{}{q.value}, nil
@@ -136,7 +135,7 @@ func (q *InQuery) Source(table string, prepare bool) (string, []interface{}, err
 		}
 		if prepare {
 			sql.WriteString(" ?")
-		} else if util.IsNumberType(q.value) {
+		} else if IsNumberType(q.value) {
 			sql.WriteString(fmt.Sprintf(" %v ", v))
 		} else {
 			sql.WriteString(fmt.Sprintf(" '%v' ", v))
@@ -165,7 +164,7 @@ func (q *NotInQuery) Source(table string, prepare bool) (string, []interface{}, 
 		}
 		if prepare {
 			sql.WriteString(" ?")
-		} else if util.IsNumberType(q.value) {
+		} else if IsNumberType(q.value) {
 			sql.WriteString(fmt.Sprintf(" %v ", v))
 		} else {
 			sql.WriteString(fmt.Sprintf(" '%v' ", v))
@@ -189,7 +188,7 @@ func (q *LikeQuery) Source(table string, prepare bool) (string, []interface{}, e
 	if prepare {
 		return fmt.Sprintf("%s.%s like ?", table, q.field), []interface{}{q.value}, nil
 	}
-	if util.IsNumberType(q.value) {
+	if IsNumberType(q.value) {
 		return fmt.Sprintf("%s.%s like '%v'", table, q.field, q.value), []interface{}{q.value}, nil
 	} else {
 		return fmt.Sprintf("%s.%s like '%v'", table, q.field, q.value), []interface{}{q.value}, nil
@@ -209,7 +208,7 @@ func (q *NotLikeQuery) Source(table string, prepare bool) (string, []interface{}
 	if prepare {
 		return fmt.Sprintf("%s.%s not like ?", table, q.field), []interface{}{q.value}, nil
 	}
-	if util.IsNumberType(q.value) {
+	if IsNumberType(q.value) {
 		return fmt.Sprintf("%s.%s not like %v", table, q.field, q.value), []interface{}{q.value}, nil
 	} else {
 		return fmt.Sprintf("%s.%s not like '%v'", table, q.field, q.value), []interface{}{q.value}, nil
@@ -229,7 +228,7 @@ func (q *GreaterThanQuery) Source(table string, prepare bool) (string, []interfa
 	if prepare {
 		return fmt.Sprintf("%s.%s > ?", table, q.field), []interface{}{q.value}, nil
 	}
-	if util.IsNumberType(q.value) {
+	if IsNumberType(q.value) {
 		return fmt.Sprintf("%s.%s > %v", table, q.field, q.value), []interface{}{q.value}, nil
 	} else {
 		return fmt.Sprintf("%s.%s > '%v'", table, q.field, q.value), []interface{}{q.value}, nil
@@ -249,7 +248,7 @@ func (q *GreaterThanOrEqualQuery) Source(table string, prepare bool) (string, []
 	if prepare {
 		return fmt.Sprintf("%s.%s >= ?", table, q.field), []interface{}{q.value}, nil
 	}
-	if util.IsNumberType(q.value) {
+	if IsNumberType(q.value) {
 		return fmt.Sprintf("%s.%s >= %v", table, q.field, q.value), []interface{}{q.value}, nil
 	} else {
 		return fmt.Sprintf("%s.%s >= '%v'", table, q.field, q.value), []interface{}{q.value}, nil
@@ -269,7 +268,7 @@ func (q *LessThanQuery) Source(table string, prepare bool) (string, []interface{
 	if prepare {
 		return fmt.Sprintf("%s.%s < ?", table, q.field), []interface{}{q.value}, nil
 	}
-	if util.IsNumberType(q.value) {
+	if IsNumberType(q.value) {
 		return fmt.Sprintf("%s.%s < %v", table, q.field, q.value), []interface{}{q.value}, nil
 	} else {
 		return fmt.Sprintf("%s.%s < '%v'", table, q.field, q.value), []interface{}{q.value}, nil
@@ -289,7 +288,7 @@ func (q *LessThanOrEqualQuery) Source(table string, prepare bool) (string, []int
 	if prepare {
 		return fmt.Sprintf("%s.%s <= ?", table, q.field), []interface{}{q.value}, nil
 	}
-	if util.IsNumberType(q.value) {
+	if IsNumberType(q.value) {
 		return fmt.Sprintf("%s.%s <= %v", table, q.field, q.value), []interface{}{q.value}, nil
 	} else {
 		return fmt.Sprintf("%s.%s <= '%v'", table, q.field, q.value), []interface{}{q.value}, nil

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
-	"gsql/util"
 	"os"
 	"os/exec"
 	"strings"
@@ -179,8 +178,8 @@ func getFields(tableName string, db *sql.DB) ([]Field, []Field, error) {
 		if err != nil {
 			panic(err)
 		}
-		field.FieldName = util.ToUpperCamelCase(field.ColumnName)
-		field.ColumnNameLowerCamel = util.ToLowerCamelCase(field.ColumnName)
+		field.FieldName = ToUpperCamelCase(field.ColumnName)
+		field.ColumnNameLowerCamel = ToLowerCamelCase(field.ColumnName)
 		field.ColumnNameUpper = strings.ToUpper(field.ColumnName)
 		field.FieldType = dbType[field.ColumnType].baseType
 		field.FieldTypeDefault = dbType[field.ColumnType].defaultValue
@@ -213,8 +212,8 @@ func (gen *Generator) Run(modules []Module) error {
 		module.CreateTime = time.Now().Format("2006-01:02 15:04:05.006")
 		module.Fields = fields
 		module.PrimaryKeyFields = primaryKeyFields
-		module.TableNameUpperCamel = util.ToUpperCamelCase(tableName)
-		module.TableNameLowerCamel = util.ToLowerCamelCase(tableName)
+		module.TableNameUpperCamel = ToUpperCamelCase(tableName)
+		module.TableNameLowerCamel = ToLowerCamelCase(tableName)
 		urls := strings.Split(module.ModulePath, gen.project)
 		module.ModelPackageName = "model"
 		module.ModelPackagePath = gen.project + urls[1] + "/" + module.ModelPackageName
@@ -303,42 +302,42 @@ func genFile(table *Module, packageName string) {
 		templateFile = "./template/extend.template"
 		filePath = table.ExtendFilePath
 		file = filePath + "/" + table.ExtendFileName
-		if util.IsExist(file) { //extend 不覆盖
+		if IsExist(file) { //extend 不覆盖
 			return
 		}
 	} else if "view" == packageName {
 		templateFile = "./template/view.template"
 		filePath = table.ViewFilePath
 		file = filePath + "/" + table.ViewFileName
-		if util.IsExist(file) { //view 不覆盖
+		if IsExist(file) { //view 不覆盖
 			return
 		}
 	} else if "param" == packageName {
 		templateFile = "./template/param.template"
 		filePath = table.ParamFilePath
 		file = filePath + "/" + table.ParamFileName
-		if util.IsExist(file) { //param 不覆盖
+		if IsExist(file) { //param 不覆盖
 			return
 		}
 	} else if "dao" == packageName {
 		templateFile = "./template/dao.template"
 		filePath = table.DaoFilePath
 		file = filePath + "/" + table.DaoFileName
-		if util.IsExist(file) { //dao 不覆盖
+		if IsExist(file) { //dao 不覆盖
 			return
 		}
 	} else if "service" == packageName {
 		templateFile = "./template/service.template"
 		filePath = table.ServiceFilePath
 		file = filePath + "/" + table.ServiceFileName
-		if util.IsExist(file) { //service 不覆盖
+		if IsExist(file) { //service 不覆盖
 			return
 		}
 	} else if "controller" == packageName {
 		templateFile = "./template/controller.template"
 		filePath = table.ControllerFilePath
 		file = filePath + "/" + table.ControllerFileName
-		if util.IsExist(file) { //controller 不覆盖
+		if IsExist(file) { //controller 不覆盖
 			return
 		}
 	}
@@ -350,7 +349,7 @@ func genFile(table *Module, packageName string) {
 		return
 	}
 	// 第二步，创建文件目录
-	err = util.CreateDir(filePath)
+	err = CreateDir(filePath)
 	if err != nil {
 		fmt.Printf("create path:%v err", filePath)
 		return
