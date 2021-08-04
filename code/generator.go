@@ -293,6 +293,7 @@ func genSql(module *Module) {
 }
 func genFile(table *Module, packageName string) {
 	fmt.Println(os.Getwd())
+
 	var templateFile, filePath, file string
 	if "model" == packageName {
 		templateFile = "./template/model.template"
