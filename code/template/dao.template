@@ -3,7 +3,7 @@ package dao
 
 import (
 	"lazyer/library/database/gdb"
-	"lazyer/library/generator/gsql"
+	"generator "github.com/go-lazyer/go-generator/sql"
 	"lazyer/library/logger"
 	"{{.ModelPackagePath}}"
 
