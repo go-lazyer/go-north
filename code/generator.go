@@ -575,7 +575,7 @@ func getDaoTemplate() string {
 				"database/sql"
 				"github.com/pkg/errors"
 			)
-			// Query first by primaryKey
+			// query first by primaryKey
 			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} interface{}  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
 				{{ if eq (len .PrimaryKeyFields) 1 -}} 
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}}))
@@ -590,7 +590,7 @@ func getDaoTemplate() string {
 				}
 				return QueryFirstBySql(sqlStr, params)
 			}
-			// Query first by gen
+			// query first by gen
 			func QueryFirstByGen(gen *generator.Generator) (*model.{{.TableNameUpperCamel}}Model, error) {
 				sqlStr, params, err := gen.SelectSql(true)
 				if err != nil {
@@ -599,7 +599,7 @@ func getDaoTemplate() string {
 				}
 				return QueryFirstBySql(sqlStr, params)
 			}
-			// Query first by sql
+			// query first by sql
 			func QueryFirstBySql(sqlStr string, params []interface{}) (*model.{{.TableNameUpperCamel}}Model, error) {
 				var {{.TableNameLowerCamel}} model.{{.TableNameUpperCamel}}Model
 				err := dbutil.PrepareFirst(sqlStr, params, &{{.TableNameLowerCamel}},&sql.DB{})
@@ -613,7 +613,7 @@ func getDaoTemplate() string {
 				return &{{.TableNameLowerCamel}},nil
 			}
 			{{if eq (len .PrimaryKeyFields) 1}} 
-			// Query map by primaryKeys
+			// query map by primaryKeys
 			func QueryMapByPrimaryKeys(primaryKeys []interface{}) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, primaryKeys))
 				sqlStr, param, err := gen.SelectSql(true)
@@ -621,6 +621,22 @@ func getDaoTemplate() string {
 					err = errors.WithStack(err)
 					return nil,err
 				}
+				return QueryMapBySql(sqlStr, params)
+			}
+			{{end}}
+			
+			// query map by gen
+			func QueryMapByGen(gen *generator.Generator) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
+				sqlStr, params, err := gen.SelectSql(true)
+				if err != nil {
+					err = errors.WithStack(err)
+					return nil, err
+				}
+				return QueryMapBySql(sqlStr, params)
+			}
+			
+			// query map by sql
+			func QueryMapBySql(sqlStr string, params []interface{}) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
 				{{.TableNameLowerCamel}}s := make([]model.{{.TableNameUpperCamel}}Model, 0)
 				err = dbutil.PrepareQuery(sqlStr, param, &{{.TableNameLowerCamel}}s,&sql.DB{})
 				if err == nil {
@@ -636,9 +652,8 @@ func getDaoTemplate() string {
 				}
 				return {{.TableNameLowerCamel}}Map,nil
 			}
-			{{end}}
-			
-			// Count by gen
+
+			// count by gen
 			func CountByGen(gen *generator.Generator) (int64, error) {
 				sqlStr, params, err := gen.CountSql(true)
 				if err != nil {
@@ -648,7 +663,7 @@ func getDaoTemplate() string {
 				return CountBySql(sqlStr, params)
 				
 			}
-			// Count by gen
+			// count by gen
 			func CountBySql(sqlStr string, params []interface{}) (int64, error) {
 				count, err := dbutil.PrepareCount(sqlStr, params,&sql.DB{})
 				if err != nil {
@@ -658,7 +673,7 @@ func getDaoTemplate() string {
 				return count,nil
 			}
 
-			// Query by gen
+			// query by gen
 			func QueryByGen(gen *generator.Generator) ([]model.{{.TableNameUpperCamel}}Model, error) {
 				sqlStr, params, err := gen.SelectSql(true)
 				if err != nil {
@@ -667,7 +682,7 @@ func getDaoTemplate() string {
 				}
 				return QueryBySql(sqlStr, params)
 			}
-			// Query by sql
+			// query by sql
 			func QueryBySql(sqlStr string, params []interface{}) ([]model.{{.TableNameUpperCamel}}Model, error) {
 				{{.TableNameLowerCamel}}s := make([]model.{{.TableNameUpperCamel}}Model, 0)
 				err := dbutil.PrepareQuery(sqlStr, params, &{{.TableNameLowerCamel}}s,&sql.DB{})
@@ -679,7 +694,7 @@ func getDaoTemplate() string {
 			}
 
 
-			// Query extend by gen
+			// query extend by gen
 			func QueryExtendByGen(gen *generator.Generator) ([]model.{{.TableNameUpperCamel}}Extend, error) {
 				sqlStr, params, err := gen.SelectSql(true)
 				if err != nil {
@@ -688,7 +703,7 @@ func getDaoTemplate() string {
 				}
 				return QueryExtendBySql(sqlStr, params)
 			}
-			// Query extend by sql
+			// query extend by sql
 			func QueryExtendBySql(sqlStr string, params []interface{}) ([]model.{{.TableNameUpperCamel}}Extend, error) {
 				{{.TableNameLowerCamel}}Extends := make([]model.{{.TableNameUpperCamel}}Extend, 0)
 				err := dbutil.PrepareQuery(sqlStr, params, &{{.TableNameLowerCamel}}Extends,&sql.DB{})
@@ -705,13 +720,27 @@ func getDaoTemplate() string {
 					err = errors.WithStack(err)
 					return 0,err
 				}
-				id, err := dbutil.PrepareInsert(sqlStr, params,&sql.DB{})
+				return InsertBySql(sqlStr, params)
+			}
+			
+			func InsertByGen(gen *generator.Generator) (int64, error) {
+				sqlStr, params, err := gen.SelectSql(true)
 				if err != nil {
 					err = errors.WithStack(err)
-					return 0,err
+					return 0, err
 				}
-				return id,nil
+				return InsertBySql(sqlStr, params)
 			}
+			
+			func InsertBySql(sqlStr string, params []interface{}) (int64, error) {
+				id, err := dbutil.PrepareInsert(sqlStr, params, &sql.DB{})
+				if err != nil {
+					err = errors.WithStack(err)
+					return 0, err
+				}
+				return id, nil
+			}
+
 			func Update({{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model) (int64, error) {
 				sqlStr, param, err := {{.TableNameLowerCamel}}.UpdateSql()
 				if err != nil {
