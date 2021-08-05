@@ -429,7 +429,7 @@ func getServiceTemplate() string {
 
 			func QueryByParam({{.TableNameLowerCamel}}Param *param.{{.TableNameUpperCamel}}Param) ([]model.{{.TableNameUpperCamel}}Model, error) {
 				query := gsql.NewBoolQuery()
-				gen := gsql.NewGenerator().PageNum({{.TableNameLowerCamel}}Param.PageNum).PageStart({{.TableNameLowerCamel}}Param.PageStart).PageSize({{.TableNameLowerCamel}}Param.PageSize).From(model.TABLE_NAME).Where(query)
+				gen := gsql.NewGenerator().PageNum({{.TableNameLowerCamel}}Param.PageNum).PageStart({{.TableNameLowerCamel}}Param.PageStart).PageSize({{.TableNameLowerCamel}}Param.PageSize).Table(model.TABLE_NAME).Where(query)
 				{{.TableNameLowerCamel}}s, err := dao.QueryByGsql(gen)
 				if err != nil {
 					return nil,err
@@ -577,10 +577,10 @@ func getDaoTemplate() string {
 			// Query first by primaryKey
 			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} interface{}  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
 				{{ if eq (len .PrimaryKeyFields) 1 -}} 
-				gen := generator.NewGenerator().From(model.TABLE_NAME).Where(generator.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}}))
+				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}}))
 				{{ else -}}
 				query := generator.NewBoolQuery(){{range $field := .PrimaryKeyFields}} .And(generator.NewEqualQuery(model.{{ .ColumnNameUpper }}, {{ .ColumnNameLowerCamel }})) {{end}}
-				gen := generator.NewGenerator().From(model.TABLE_NAME).Where(query)
+				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(query)
 				{{ end -}}
 				sql, params, err := gen.SelectSql(true)
 				if err != nil {
@@ -614,7 +614,7 @@ func getDaoTemplate() string {
 			{{if eq (len .PrimaryKeyFields) 1}} 
 			// Query map by primaryKeys
 			func QueryMapByPrimaryKeys(primaryKeys []interface{}) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
-				gen := generator.NewGenerator().From(model.TABLE_NAME).Where(generator.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, primaryKeys))
+				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, primaryKeys))
 				sql, param, err := gen.SelectSql(true)
 				if err == nil {
 					err = errors.WithStack(err)
