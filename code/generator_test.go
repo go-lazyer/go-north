@@ -5,15 +5,15 @@ import (
 )
 
 func TestGenModel(t *testing.T) {
-	dsn := "root:Daoway_Mysql_iO12@tcp(analysis.daoway.cn:3306)/daowei?charset=utf8mb4&parseTime=true&loc=Local"
+	dsn := "root:123@tcp(localhost:3306)/test?charset=utf8mb4&parseTime=true&loc=Local"
 	var tables = []Module{
 		{
-			TableName:  "city",
-			ModulePath: "/Users/Hch/Workspace/lazyer/api/city", //相对路径，包含项目名
+			TableName:  "user",
+			ModulePath: "/Users/Hch/Workspace/lazyer/api/user", //相对路径，包含项目名
 		},
 		// {
-		// 	TableName:  "technician",
-		// 	ModulePath: "/Users/Hch/Workspace/analysis/api/technician", //相对路径，包含项目名
+		// 	TableName:  "order",
+		// 	ModulePath: "/Users/Hch/Workspace/lazyer/api/order", //相对路径，包含项目名
 		// },
 	}
 

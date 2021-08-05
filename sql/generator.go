@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 )
 
@@ -97,6 +96,44 @@ func (s *Generator) AddOrderBy(name string, orderByType string) *Generator {
 	return s
 }
 
+func (s *Generator) CountSql(prepare bool) (string, []interface{}, error) {
+	params := make([]interface{}, 0, 10)
+	var sql bytes.Buffer
+	sql.WriteString("select count(*) count ")
+	if len(s.tableName) > 0 {
+		sql.WriteString(" from  `" + s.tableName + "`")
+	}
+
+	if s.joins != nil && len(s.joins) > 0 {
+		for _, join := range s.joins {
+			sql.WriteString(fmt.Sprintf(" %v %v on %v", join.joinType, join.tableName, join.condition))
+			for i, query := range join.querys {
+				if i == 0 {
+					sql.WriteString(" and ")
+				} else {
+					sql.WriteString(" or ")
+				}
+				source, param, _ := query.Source(join.tableName, prepare)
+				sql.WriteString(" " + source + " ")
+				params = append(params, param...)
+			}
+		}
+	}
+
+	if s.querys != nil && len(s.querys) > 0 {
+		sql.WriteString(" where   ")
+		for i, query := range s.querys {
+			if i != 0 {
+				sql.WriteString(" or ")
+			}
+			source, param, _ := query.Source(s.tableName, prepare)
+			sql.WriteString(" " + source + " ")
+			params = append(params, param...)
+		}
+	}
+	return sql.String(), params, nil
+}
+
 func (s *Generator) SelectSql(prepare bool) (string, []interface{}, error) {
 	params := make([]interface{}, 0, 10)
 	var sql bytes.Buffer
@@ -177,7 +214,11 @@ func (s *Generator) UpdateSql(prepare bool) (string, []interface{}, error) {
 		if n != 0 {
 			sql.WriteString(",")
 		}
-		sql.WriteString(fmt.Sprintf("%v=?", name))
+		if prepare {
+			sql.WriteString(fmt.Sprintf("%v=?", name))
+		} else {
+			sql.WriteString(fmt.Sprintf("%v='%v'", name, value))
+		}
 		params = append(params, value)
 		n++
 	}
@@ -228,12 +269,6 @@ func (s *Generator) BatchInsertSql(prepare bool) (string, []interface{}, error) 
 	}
 	sql.WriteString(") values")
 	n = 0
-
-	// INSERT INTO
-	// items(name,city,price,number,picture)
-	// VALUES
-	// ('耐克运动鞋','广州',500,1000,'003.jpg'),
-	// ('耐克运动鞋2','广州2',500,1000,'002.jpg');
 	params := make([]interface{}, 0)
 	for _, maps := range s.inserts {
 		if n != 0 {
@@ -247,7 +282,7 @@ func (s *Generator) BatchInsertSql(prepare bool) (string, []interface{}, error) 
 			}
 			params = append(params, maps[field])
 			if prepare {
-				sql.WriteString(fmt.Sprintf(" ? "))
+				sql.WriteString(" ? ")
 			} else {
 				sql.WriteString(fmt.Sprintf(" '%v' ", maps[field]))
 			}
@@ -260,7 +295,6 @@ func (s *Generator) BatchInsertSql(prepare bool) (string, []interface{}, error) 
 }
 func (s *Generator) BatchUpdateSql(prepare bool) (string, []interface{}, error) {
 
-
 	if s.tableName == "" {
 		return "", nil, errors.New("tableName is not null")
 	}
@@ -269,7 +303,7 @@ func (s *Generator) BatchUpdateSql(prepare bool) (string, []interface{}, error) 
 	}
 
 	if s.querys == nil || len(s.querys) != 1 {
-		return "", nil, errors.New("The querys size must be 1")
+		return "", nil, errors.New("the querys size must be 1")
 	}
 
 	if s.updates == nil || len(s.updates) <= 0 {
@@ -291,7 +325,7 @@ func (s *Generator) BatchUpdateSql(prepare bool) (string, []interface{}, error) 
 		if n != 0 {
 			sql.WriteString(",")
 		}
-		sql.WriteString(fmt.Sprintf("%v = CASE %v", field, s.primary))
+		sql.WriteString(fmt.Sprintf("%v = CASE '%v'", field, s.primary))
 		for id, setMap := range s.updates {
 			v, ok := setMap[field]
 			if !ok {
@@ -299,9 +333,9 @@ func (s *Generator) BatchUpdateSql(prepare bool) (string, []interface{}, error) 
 			}
 			params = append(params, id, v)
 			if prepare {
-				sql.WriteString(fmt.Sprintf(" WHEN ? THEN ?"))
+				sql.WriteString(" WHEN ? THEN ?")
 			} else {
-				sql.WriteString(fmt.Sprintf(" WHEN %v THEN %v", id, v))
+				sql.WriteString(fmt.Sprintf(" WHEN '%v' THEN '%v'", id, v))
 			}
 
 		}
@@ -312,43 +346,5 @@ func (s *Generator) BatchUpdateSql(prepare bool) (string, []interface{}, error) 
 	sql.WriteString("where " + source + " ")
 	params = append(params, param...)
 
-	return sql.String(), params, nil
-}
-
-func (s *Generator) CountSql(prepare bool) (string, []interface{}, error) {
-	params := make([]interface{}, 0, 10)
-	var sql bytes.Buffer
-	sql.WriteString("select count(*) count ")
-	if len(s.tableName) > 0 {
-		sql.WriteString(" from  `" + s.tableName + "`")
-	}
-
-	if s.joins != nil && len(s.joins) > 0 {
-		for _, join := range s.joins {
-			sql.WriteString(fmt.Sprintf(" %v %v on %v", join.joinType, join.tableName, join.condition))
-			for i, query := range join.querys {
-				if i == 0 {
-					sql.WriteString(" and ")
-				} else {
-					sql.WriteString(" or ")
-				}
-				source, param, _ := query.Source(join.tableName, prepare)
-				sql.WriteString(" " + source + " ")
-				params = append(params, param...)
-			}
-		}
-	}
-
-	if s.querys != nil && len(s.querys) > 0 {
-		sql.WriteString(" where   ")
-		for i, query := range s.querys {
-			if i != 0 {
-				sql.WriteString(" or ")
-			}
-			source, param, _ := query.Source(s.tableName, prepare)
-			sql.WriteString(" " + source + " ")
-			params = append(params, param...)
-		}
-	}
 	return sql.String(), params, nil
 }
