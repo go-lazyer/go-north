@@ -411,10 +411,11 @@ func getServiceTemplate() string {
 			package service
 
 			import (
-				"lazyer/library/generator/gsql"
 				"{{.DaoPackagePath}}"
 				"{{.ModelPackagePath}}"
 				"{{.ParamPackagePath}}"
+			
+				generator "github.com/go-lazyer/go-generator/sql"
 			)
 
 
@@ -428,8 +429,8 @@ func getServiceTemplate() string {
 
 
 			func QueryByParam({{.TableNameLowerCamel}}Param *param.{{.TableNameUpperCamel}}Param) ([]model.{{.TableNameUpperCamel}}Model, error) {
-				query := gsql.NewBoolQuery()
-				gen := gsql.NewGenerator().PageNum({{.TableNameLowerCamel}}Param.PageNum).PageStart({{.TableNameLowerCamel}}Param.PageStart).PageSize({{.TableNameLowerCamel}}Param.PageSize).Table(model.TABLE_NAME).Where(query)
+				query := generator.NewBoolQuery()
+				gen := generator.NewGenerator().PageNum({{.TableNameLowerCamel}}Param.PageNum).PageStart({{.TableNameLowerCamel}}Param.PageStart).PageSize({{.TableNameLowerCamel}}Param.PageSize).Table(model.TABLE_NAME).Where(query)
 				{{.TableNameLowerCamel}}s, err := dao.QueryByGsql(gen)
 				if err != nil {
 					return nil,err
@@ -601,7 +602,7 @@ func getDaoTemplate() string {
 			// Query first by sql
 			func QueryFirstBySql(sqlStr string, params []interface{}) (*model.{{.TableNameUpperCamel}}Model, error) {
 				var {{.TableNameLowerCamel}} model.{{.TableNameUpperCamel}}Model
-				err := dbutil.PrepareFirst(sqlStr, params, &{{.TableNameLowerCamel}},&sql.DB{},&sql.DB{})
+				err := dbutil.PrepareFirst(sqlStr, params, &{{.TableNameLowerCamel}},&sql.DB{})
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err

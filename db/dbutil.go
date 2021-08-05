@@ -2,13 +2,13 @@ package dbutil
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
 	"strings"
 )
 
-// 预处理查询示例
 func PrepareCount(sql string, params []interface{}, db *sql.DB) (int64, error) {
 	serverMode := os.Getenv("server.mode")
 	if serverMode == "dev" {
@@ -27,7 +27,6 @@ func PrepareCount(sql string, params []interface{}, db *sql.DB) (int64, error) {
 	}
 	defer rows.Close()
 
-	// 循环读取结果集中的数据
 	var count int64
 	for rows.Next() {
 		err := rows.Scan(&count)
@@ -60,8 +59,10 @@ func PrepareFirst(sql string, params []interface{}, structs interface{}, db *sql
 	return nil
 }
 
-// 预处理查询示例
 func PrepareQuery(sql string, params []interface{}, results interface{}, db *sql.DB) error {
+	if db == nil {
+		return errors.New("db not allowed to be nil,need to instantiate yourself")
+	}
 	serverMode := os.Getenv("server.mode")
 	if serverMode == "dev" {
 		fmt.Printf("sql is %v", sql)
@@ -86,6 +87,9 @@ func PrepareQuery(sql string, params []interface{}, results interface{}, db *sql
 
 // 预处理插入 返回批量自增ID
 func PrepareInsert(sql string, params []interface{}, db *sql.DB) (int64, error) {
+	if db == nil {
+		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
+	}
 	serverMode := os.Getenv("server.mode")
 	if serverMode == "dev" {
 		fmt.Printf("sql is %v", sql)
@@ -108,6 +112,9 @@ func PrepareInsert(sql string, params []interface{}, db *sql.DB) (int64, error) 
 }
 
 func PrepareUpdate(sql string, params []interface{}, db *sql.DB) (int64, error) {
+	if db == nil {
+		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
+	}
 	serverMode := os.Getenv("server.mode")
 	if serverMode == "dev" {
 		fmt.Printf("sql is %v", sql)
