@@ -406,7 +406,6 @@ func getViewTemplate() string {
 		return views
 	}`
 }
-
 func getServiceTemplate() string {
 	return `// Create by code generator  {{.CreateTime}}
 			package service
@@ -438,7 +437,6 @@ func getServiceTemplate() string {
 				return {{.TableNameLowerCamel}}s,nil
 			}`
 }
-
 func getParamTemplate() string {
 	return `// Create by code generator  {{.CreateTime}}
 			package param
@@ -566,36 +564,46 @@ func getExtendTemplate() string {
 			`
 }
 func getDaoTemplate() string {
-	return `// Create by code generator  {{.CreateTime}}
+	return `// Create by go-generator  {{.CreateTime}}
 			package dao
 			
 			import (
-				"lazyer/library/database/gdb"
-				"generator "github.com/go-lazyer/go-generator/sql"
-				"lazyer/library/logger"
+				dbutil "github.com/go-lazyer/go-generator/db"
+				generator "github.com/go-lazyer/go-generator/sql"
 				"{{.ModelPackagePath}}"
 			
 				"github.com/pkg/errors"
 			)
-			
+			// Query first by primaryKey
 			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} interface{}  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
 				{{ if eq (len .PrimaryKeyFields) 1 -}} 
-				gen := gsql.NewGenerator().From(model.TABLE_NAME).Where(gsql.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}}))
+				gen := generator.NewGenerator().From(model.TABLE_NAME).Where(generator.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}}))
 				{{ else -}}
-				query := gsql.NewBoolQuery(){{range $field := .PrimaryKeyFields}} .And(gsql.NewEqualQuery(model.{{ .ColumnNameUpper }}, {{ .ColumnNameLowerCamel }})) {{end}}
-				gen := gsql.NewGenerator().From(model.TABLE_NAME).Where(query)
+				query := generator.NewBoolQuery(){{range $field := .PrimaryKeyFields}} .And(generator.NewEqualQuery(model.{{ .ColumnNameUpper }}, {{ .ColumnNameLowerCamel }})) {{end}}
+				gen := generator.NewGenerator().From(model.TABLE_NAME).Where(query)
 				{{ end -}}
 				sql, params, err := gen.SelectSql(true)
 				if err != nil {
 					err = errors.WithStack(err)
-					logger.Error.Printf("%+v", err)
 					return nil,err
 				}
-				var {{.TableNameLowerCamel}} model.{{.TableNameUpperCamel}}Model
-				err = gdb.PrepareFirst(sql, params, &{{.TableNameLowerCamel}})
+				return QueryFirstBySql(sql, params)
+			}
+			// Query first by gen
+			func QueryFirstByGen(gen *generator.Generator) (*model.{{.TableNameUpperCamel}}Model, error) {
+				sql, params, err := gen.SelectSql(true)
 				if err != nil {
 					err = errors.WithStack(err)
-					logger.Error.Printf("%+v", err)
+					return nil,err
+				}
+				return QueryFirstBySql(sql, params)
+			}
+			// Query first by sql
+			func QueryFirstBySql(sql string, params []interface{}) (*model.{{.TableNameUpperCamel}}Model, error) {
+				var {{.TableNameLowerCamel}} model.{{.TableNameUpperCamel}}Model
+				err = dbutil.PrepareFirst(sql, params, &{{.TableNameLowerCamel}})
+				if err != nil {
+					err = errors.WithStack(err)
 					return nil,err
 				}
 				if {{.TableNameLowerCamel}}.{{(index .PrimaryKeyFields 0).FieldName}}.{{(index .PrimaryKeyFields 0).FieldNullTypeValue}} == {{(index .PrimaryKeyFields 0).FieldTypeDefault}} {
@@ -604,19 +612,18 @@ func getDaoTemplate() string {
 				return &{{.TableNameLowerCamel}},nil
 			}
 			{{if eq (len .PrimaryKeyFields) 1}} 
+			// Query map by primaryKeys
 			func QueryMapByPrimaryKeys(primaryKeys []interface{}) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
-				gen := gsql.NewGenerator().From(model.TABLE_NAME).Where(gsql.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, primaryKeys))
+				gen := generator.NewGenerator().From(model.TABLE_NAME).Where(generator.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, primaryKeys))
 				sql, param, err := gen.SelectSql(true)
 				if err == nil {
 					err = errors.WithStack(err)
-					logger.Error.Printf("%+v", err)
 					return nil,err
 				}
 				{{.TableNameLowerCamel}}s := make([]model.{{.TableNameUpperCamel}}Model, 0)
-				err = gdb.PrepareQuery(sql, param, &{{.TableNameLowerCamel}}s)
+				err = dbutil.PrepareQuery(sql, param, &{{.TableNameLowerCamel}}s)
 				if err == nil {
 					err = errors.WithStack(err)
-					logger.Error.Printf("%+v", err)
 					return nil,err
 				}
 				if {{.TableNameLowerCamel}}s == nil || len({{.TableNameLowerCamel}}s) == 0 {
@@ -630,92 +637,76 @@ func getDaoTemplate() string {
 			}
 			{{end}}
 			
-			
-			func CountByGsql(gen *gsql.Generator) (int64, error) {
+			// Count by gen
+			func CountByGen(gen *generator.Generator) (int64, error) {
 				sql, params, err := gen.CountSql(true)
 				if err != nil {
 					err = errors.WithStack(err)
-					logger.Error.Printf("%+v", err)
 					return 0,err
 				}
-				count, err := gdb.PrepareCount(sql, params)
+				return CountBySql(sql, params)
+				
+			}
+			// Count by gen
+			func CountBySql(sql string, params []interface{}) (int64, error) {
+				count, err := dbutil.PrepareCount(sql, params)
 				if err != nil {
 					err = errors.WithStack(err)
-					logger.Error.Printf("%+v", err)
 					return 0,err
 				}
 				return count,nil
 			}
-			
-			// 通过gsql 查询
-			func QueryByGsql(gen *gsql.Generator) ([]model.{{.TableNameUpperCamel}}Model, error) {
+
+			// Query by gen
+			func QueryByGen(gen *generator.Generator) ([]model.{{.TableNameUpperCamel}}Model, error) {
 				sql, params, err := gen.SelectSql(true)
 				if err != nil {
 					err = errors.WithStack(err)
-					logger.Error.Printf("%+v", err)
 					return nil,err
 				}
+				return QueryBySql(sql, params)
+			}
+			// Query by sql
+			func QueryBySql(sql string, params []interface{}) ([]model.{{.TableNameUpperCamel}}Model, error) {
 				{{.TableNameLowerCamel}}s := make([]model.{{.TableNameUpperCamel}}Model, 0)
-				err = gdb.PrepareQuery(sql, params, &{{.TableNameLowerCamel}}s)
+				err = dbutil.PrepareQuery(sql, params, &{{.TableNameLowerCamel}}s)
 				if err != nil {
 					err = errors.WithStack(err)
-					logger.Error.Printf("%+v", err)
 					return nil,err
 				}
 				return {{.TableNameLowerCamel}}s,nil
 			}
-			
-			// 通过gsql 查询 第一条
-			func QueryFirstByGsql(gen *gsql.Generator) (*model.{{.TableNameUpperCamel}}Model, error) {
+
+
+			// Query extend by gen
+			func QueryExtendByGen(gen *generator.Generator) ([]model.{{.TableNameUpperCamel}}Extend, error) {
 				sql, params, err := gen.SelectSql(true)
 				if err != nil {
 					err = errors.WithStack(err)
-					logger.Error.Printf("%+v", err)
 					return nil,err
 				}
-				var {{.TableNameLowerCamel}} model.{{.TableNameUpperCamel}}Model
-				err = gdb.PrepareFirst(sql, params, &{{.TableNameLowerCamel}})
-				if err != nil {
-					err = errors.WithStack(err)
-					logger.Error.Printf("%+v", err)
-					return nil,err
-				}
-				if {{.TableNameLowerCamel}}.{{(index .PrimaryKeyFields 0).FieldName}}.{{(index .PrimaryKeyFields 0).FieldNullTypeValue}} == {{(index .PrimaryKeyFields 0).FieldTypeDefault}} {
-					return nil,nil
-				}
-				return &{{.TableNameLowerCamel}},nil
+				return QueryExtendBySql(sql, params)
 			}
-			
-			
-			// 通过gsql 查询
-			func QueryExtendByGsql(gen *gsql.Generator) ([]model.{{.TableNameUpperCamel}}Extend, error) {
-				sql, params, err := gen.SelectSql(true)
-				if err != nil {
-					err = errors.WithStack(err)
-					logger.Error.Printf("%+v", err)
-					return nil,err
-				}
+			// Query extend by sql
+			func QueryExtendBySql(sql string, params []interface{}) ([]model.{{.TableNameUpperCamel}}Extend, error) {
 				{{.TableNameLowerCamel}}Extends := make([]model.{{.TableNameUpperCamel}}Extend, 0)
-				err = gdb.PrepareQuery(sql, params, &{{.TableNameLowerCamel}}Extends)
+				err = dbutil.PrepareQuery(sql, params, &{{.TableNameLowerCamel}}Extends)
 				if err != nil {
 					err = errors.WithStack(err)
-					logger.Error.Printf("%+v", err)
 					return nil,err
 				}
 				return {{.TableNameLowerCamel}}Extends,nil
 			}
-			
+
 			func Insert({{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model) (int64, error) {
 				sql, params, err := {{.TableNameLowerCamel}}.InsertSql()
 				if err != nil {
 					err = errors.WithStack(err)
-					logger.Error.Printf("%+v", err)
 					return 0,err
 				}
-				id, err := gdb.PrepareInsert(sql, params)
+				id, err := dbutil.PrepareInsert(sql, params)
 				if err != nil {
 					err = errors.WithStack(err)
-					logger.Error.Printf("%+v", err)
 					return 0,err
 				}
 				return id,nil
@@ -723,40 +714,22 @@ func getDaoTemplate() string {
 			func Update({{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model) (int64, error) {
 				sql, param, err := {{.TableNameLowerCamel}}.UpdateSql()
 				if err != nil {
-					logger.Error.Printf("%+v", err)
 					return 0,err
 				}
-				count, err := gdb.PrepareUpdate(sql, param)
-				if err != nil {
-					err = errors.WithStack(err)
-					logger.Error.Printf("%+v", err)
-					return 0,err
-				}
-				return count,nil
+				return UpdateBySql(sql, param)
 			}
 			func UpdateBySelective({{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model) (int64, error) {
 				sql, param, err := {{.TableNameLowerCamel}}.UpdateSqlBySelective()
 				if err != nil {
 					err = errors.WithStack(err)
-					logger.Error.Printf("%+v", err)
 					return 0,err
 				}
-				count, err := gdb.PrepareUpdate(sql, param)
-				if err != nil {
-					err = errors.WithStack(err)
-					logger.Error.Printf("%+v", err)
-					return 0,err
-				}
-				return count,nil
+				return UpdateBySql(sql, param)
 			}
-			
-			
-			// 通过gsql修改
 			func UpdateBySql(sql string, params []interface{}) (int64, error) {
-				count, err := gdb.PrepareUpdate(sql, params)
+				count, err := dbutil.PrepareUpdate(sql, params)
 				if err != nil {
 					err = errors.WithStack(err)
-					logger.Error.Printf("%+v", err)
 					return 0, err
 				}
 				return count, nil
