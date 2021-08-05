@@ -5,11 +5,11 @@ import (
 )
 
 func TestGenModel(t *testing.T) {
-	dsn := "root:Daoway_Mysql_iO12@tcp(localhost:3306)/daowei?charset=utf8mb4&parseTime=true&loc=Local"
+	dsn := "root:Daoway_Mysql_iO12@tcp(analysis.daoway.cn:3306)/daowei?charset=utf8mb4&parseTime=true&loc=Local"
 	var tables = []Module{
 		{
-			TableName:  "s_tech_info",
-			ModulePath: "/Users/Hch/Workspace/analysis/api/s_tech_info", //相对路径，包含项目名
+			TableName:  "city",
+			ModulePath: "/Users/Hch/Workspace/lazyer/api/city", //相对路径，包含项目名
 		},
 		// {
 		// 	TableName:  "technician",
@@ -17,5 +17,5 @@ func TestGenModel(t *testing.T) {
 		// },
 	}
 
-	NewGenerator().Dsn(dsn).Project("analysis").Run(tables)
+	NewGenerator().Dsn(dsn).Project("lazyer").Run(tables)
 }

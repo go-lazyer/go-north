@@ -292,59 +292,57 @@ func genSql(module *Module) {
 	module.UpdateSelectiveSql = updateSelectiveSql.String()
 }
 func genFile(table *Module, packageName string) {
-	fmt.Println(os.Getwd())
 
-	var templateFile, filePath, file string
+	var templateStr, filePath, file string
 	if "model" == packageName {
-		templateFile = "./template/model.template"
+		templateStr = getModelTemplate()
 		filePath = table.ModelFilePath
 		file = filePath + "/" + table.ModelFileName
 	} else if "extend" == packageName {
-		templateFile = "./template/extend.template"
+		templateStr = getExtendTemplate()
 		filePath = table.ExtendFilePath
 		file = filePath + "/" + table.ExtendFileName
 		if IsExist(file) { //extend 不覆盖
 			return
 		}
 	} else if "view" == packageName {
-		templateFile = "./template/view.template"
+		templateStr = getViewTemplate()
 		filePath = table.ViewFilePath
 		file = filePath + "/" + table.ViewFileName
 		if IsExist(file) { //view 不覆盖
 			return
 		}
 	} else if "param" == packageName {
-		templateFile = "./template/param.template"
+		templateStr = getParamTemplate()
 		filePath = table.ParamFilePath
 		file = filePath + "/" + table.ParamFileName
 		if IsExist(file) { //param 不覆盖
 			return
 		}
 	} else if "dao" == packageName {
-		templateFile = "./template/dao.template"
+		templateStr = getDaoTemplate()
 		filePath = table.DaoFilePath
 		file = filePath + "/" + table.DaoFileName
 		if IsExist(file) { //dao 不覆盖
 			return
 		}
 	} else if "service" == packageName {
-		templateFile = "./template/service.template"
+		templateStr = getServiceTemplate()
 		filePath = table.ServiceFilePath
 		file = filePath + "/" + table.ServiceFileName
 		if IsExist(file) { //service 不覆盖
 			return
 		}
 	} else if "controller" == packageName {
-		templateFile = "./template/controller.template"
+		templateStr = getController()
 		filePath = table.ControllerFilePath
 		file = filePath + "/" + table.ControllerFileName
 		if IsExist(file) { //controller 不覆盖
 			return
 		}
 	}
-
 	// 第一步，加载模版文件
-	tmpl, err := template.ParseFiles(templateFile)
+	tmpl, err := template.New("tmpl").Parse(templateStr)
 	if err != nil {
 		fmt.Println("create template model, err:", err)
 		return
@@ -369,4 +367,415 @@ func genFile(table *Module, packageName string) {
 	//第五步，格式化代码
 	cmd := exec.Command("gofmt", "-w", file)
 	cmd.Run()
+}
+func getViewTemplate() string {
+	return ` // Create by code generator  {{.CreateTime}}
+	package view
+	
+	import (
+		"{{.ModelPackagePath}}"
+		"time"
+	)
+	type {{.TableNameUpperCamel}}View struct {
+		{{range $field := .Fields}}{{ .FieldName }}  {{ .FieldType }} ` + "`{{ .FieldJsonTag }}`" + ` // {{ .Comment }}
+		{{end}}
+	}
+	func Convert(m *model.{{.TableNameUpperCamel}}Model) *{{.TableNameUpperCamel}}View {
+		return &{{.TableNameUpperCamel}}View{
+			{{range $field := .Fields}}{{ .FieldName }} : m.{{ .FieldName }}.{{ .FieldNullTypeValue}},
+			{{end}}
+		}
+	}
+	func Converts(models []model.{{.TableNameUpperCamel}}Model) []{{.TableNameUpperCamel}}View {
+		views := make([]{{.TableNameUpperCamel}}View, 0, len(models))
+		for _, model := range models {
+			views = append(views, *Convert(&model))
+		}
+		return views
+	}
+	
+	func ConvertExtend(m *model.{{.TableNameUpperCamel}}Extend) *{{.TableNameUpperCamel}}View {
+		view := Convert(&m.{{.TableNameUpperCamel}}Model)
+		return view
+	}
+	func ConvertExtends(extends []model.{{.TableNameUpperCamel}}Extend) []{{.TableNameUpperCamel}}View {
+		views := make([]{{.TableNameUpperCamel}}View, 0, len(extends))
+		for _, extend := range extends {
+			views = append(views, *ConvertExtend(&extend))
+		}
+		return views
+	}`
+}
+
+func getServiceTemplate() string {
+	return `// Create by code generator  {{.CreateTime}}
+			package service
+
+			import (
+				"lazyer/library/generator/gsql"
+				"{{.DaoPackagePath}}"
+				"{{.ModelPackagePath}}"
+				"{{.ParamPackagePath}}"
+			)
+
+
+			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} interface{}  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
+				{{.TableNameLowerCamel}}, err := dao.QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }}   {{end}})
+				if err != nil {
+					return nil,err
+				}
+				return {{.TableNameLowerCamel}},nil
+			}
+
+
+			func QueryByParam({{.TableNameLowerCamel}}Param *param.{{.TableNameUpperCamel}}Param) ([]model.{{.TableNameUpperCamel}}Model, error) {
+				query := gsql.NewBoolQuery()
+				gen := gsql.NewGenerator().PageNum({{.TableNameLowerCamel}}Param.PageNum).PageStart({{.TableNameLowerCamel}}Param.PageStart).PageSize({{.TableNameLowerCamel}}Param.PageSize).From(model.TABLE_NAME).Where(query)
+				{{.TableNameLowerCamel}}s, err := dao.QueryByGsql(gen)
+				if err != nil {
+					return nil,err
+				}
+				return {{.TableNameLowerCamel}}s,nil
+			}`
+}
+
+func getParamTemplate() string {
+	return `// Create by code generator  {{.CreateTime}}
+			package param
+			
+			import (
+				"time"
+			)
+			type {{.TableNameUpperCamel}}Param struct {
+				{{range $field := .Fields}}{{ .FieldName }}  {{ .FieldType }} ` + "`{{.FieldFormTag}} {{ .FieldJsonTag }}`" + ` // {{ .Comment }}
+				{{end}}
+				PageNum 	int ` + "`form:\"page\" json:\"page\"`" + `
+				PageStart 	int ` + "`form:\"start\" json:\"start\"`" + `
+				PageSize 	int ` + "`form:\"size\" json:\"size\"`" + `
+			}`
+}
+func getModelTemplate() string {
+	return `// Create by code generator  {{.CreateTime}}
+	package model
+	
+	import (
+		"bytes"
+		"database/sql"
+		"errors"
+	)
+	
+	const (
+		{{range $field := .Fields}}
+			{{- .ColumnNameUpper -}}  ="{{ .ColumnName }}" // {{ .Comment }}
+		{{end}}
+		TABLE_NAME  = "{{ .TableName }}" // 表名
+	)
+	
+	type {{.TableNameUpperCamel}}Model struct {
+		{{range $field := .Fields}}{{ .FieldName }}  {{ .FieldNullType }} ` + "`{{ .FieldOrmTag }} {{ .FieldDefaultTag }}`" + ` // {{ .Comment }}
+		{{end}}
+	}
+	
+	
+	func (m *{{.TableNameUpperCamel}}Model) UpdateSql() (string, []interface{}, error) {
+		{{range $field := .Fields}}
+			{{if eq .IsPrimaryKey 1}}
+			if !m.{{ .FieldName }}.Valid {
+				return "", nil, errors.New("{{ .FieldName }} is not null")
+		}{{end}}{{end}}
+	
+		params := make([]interface{}, 0, {{len .Fields}})
+		var sql bytes.Buffer
+		sql.WriteString("update ` + "`{{.TableName}}`" + ` " ){{$n := 0}}
+		sql.WriteString("set {{range $i,$field := .Fields}}{{if ne $field.IsPrimaryKey 1}}{{if ne $n  0}},{{end}}{{$n = $i}}` + "`{{$field.ColumnName}}`" + ` = ?{{end}}{{end}} "){{$n = -1}}
+	
+		{{range $field := .Fields}}{{if ne $field.IsPrimaryKey 1}}
+		{{.ColumnNameLowerCamel}}V, err := m.{{ .FieldName }}.Value()
+		if {{.ColumnNameLowerCamel}}V ==nil || err != nil {
+			params = append(params, {{if .ColumnDefault.Valid}}"{{.ColumnDefault.String}}"{{else}}nil{{end}})
+		} else {
+			params = append(params, {{.ColumnNameLowerCamel}}V)
+		}
+		{{end}}{{end}}	{{$n = -1}}
+	
+	
+		sql.WriteString(" where  {{range $i,$field := .Fields}}{{if eq $field.IsPrimaryKey 1}}{{if ne $n  -1}} and {{end}}{{$n = $i}}` + "`{{$field.ColumnName}}`" + ` = ?{{end}}{{end}} "){{$n = -1}}
+		params = append(params {{range $i,$field := .Fields}}{{if eq $field.IsPrimaryKey 1}},m.{{$field.FieldName}}.{{.FieldNullTypeValue}}{{end}}{{end}})
+		return sql.String(), params, nil
+	}
+	
+	func (m *{{.TableNameUpperCamel}}Model) UpdateSqlBySelective() (string, []interface{}, error) {
+		{{range $field := .Fields}}{{if eq .IsPrimaryKey 1}} if !m.{{ .FieldName }}.Valid {
+			return "", nil, errors.New("{{ .FieldName }} is not null")
+		}{{end}}
+		{{end}}
+	
+		params := make([]interface{}, 0, {{len .Fields}})
+		var sql bytes.Buffer
+		sql.WriteString("update ` + "`{{.TableName}}`" + ` " )
+	
+		sql.WriteString(" set "){{$n := -1}}
+		{{range $i,$field := .Fields}}
+			{{if eq .IsPrimaryKey 1}}
+				if m.{{$field.FieldName}}.Valid {
+					sql.WriteString("{{if ne $n  -1}},{{end}} ` + "`{{$field.ColumnName}}`" + ` = ? "){{$n = $i}}
+					params = append(params, m.{{$field.FieldName}}.{{.FieldNullTypeValue}})
+				}
+			{{else}}
+				if m.{{$field.FieldName}}.Valid {
+					sql.WriteString(", ` + "`{{$field.ColumnName}}`" + ` = ? "){{$n = $i}}
+					params = append(params, m.{{$field.FieldName}}.{{.FieldNullTypeValue}})
+				}
+			{{end}}
+		{{end}}
+		
+		{{$n = -1}}
+		sql.WriteString(" where  {{range $i,$field := .PrimaryKeyFields}}{{if ne $n  -1}} and {{end}}{{$n = $i}}` + "`{{$field.ColumnName}}`" + ` = ?{{end}} ")
+		
+		{{$n = -1}}
+		params = append(params {{range $i,$field := .PrimaryKeyFields}},m.{{$field.FieldName}}.{{.FieldNullTypeValue}}{{end}})
+		return sql.String(), params, nil
+	}
+	
+	
+	func (m *{{.TableNameUpperCamel}}Model) InsertSql() (string, []interface{}, error) {
+		params := make([]interface{}, 0, {{len .Fields}})
+		var sql bytes.Buffer
+		sql.WriteString("insert into ` + "`{{.TableName}}`" + ` ")
+		sql.WriteString(" ({{range $i,$field := .Fields}} {{if ne $i 0}},{{end}}` + "`{{$field.ColumnName}}`" + `{{end}})")
+		sql.WriteString("values ({{range $i,$field := .Fields}} {{if ne $i 0}},{{end}}?{{end}})")
+		
+		{{range $field := .Fields}}
+		{{.ColumnNameLowerCamel}}V, err := m.{{ .FieldName }}.Value()
+		if {{.ColumnNameLowerCamel}}V ==nil || err != nil {
+			params = append(params, {{if .ColumnDefault.Valid}}"{{.ColumnDefault.String}}"{{else}}nil{{end}})
+		} else {
+			params = append(params, {{.ColumnNameLowerCamel}}V)
+		}
+		{{end}}	
+		
+		return sql.String(), params, nil
+	}`
+}
+func getExtendTemplate() string {
+	return `package model
+
+			type {{.TableNameUpperCamel}}Extend struct {
+				{{.TableNameUpperCamel}}Model
+			}
+			`
+}
+func getDaoTemplate() string {
+	return `// Create by code generator  {{.CreateTime}}
+			package dao
+			
+			import (
+				"lazyer/library/database/gdb"
+				"generator "github.com/go-lazyer/go-generator/sql"
+				"lazyer/library/logger"
+				"{{.ModelPackagePath}}"
+			
+				"github.com/pkg/errors"
+			)
+			
+			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} interface{}  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
+				{{ if eq (len .PrimaryKeyFields) 1 -}} 
+				gen := gsql.NewGenerator().From(model.TABLE_NAME).Where(gsql.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}}))
+				{{ else -}}
+				query := gsql.NewBoolQuery(){{range $field := .PrimaryKeyFields}} .And(gsql.NewEqualQuery(model.{{ .ColumnNameUpper }}, {{ .ColumnNameLowerCamel }})) {{end}}
+				gen := gsql.NewGenerator().From(model.TABLE_NAME).Where(query)
+				{{ end -}}
+				sql, params, err := gen.SelectSql(true)
+				if err != nil {
+					err = errors.WithStack(err)
+					logger.Error.Printf("%+v", err)
+					return nil,err
+				}
+				var {{.TableNameLowerCamel}} model.{{.TableNameUpperCamel}}Model
+				err = gdb.PrepareFirst(sql, params, &{{.TableNameLowerCamel}})
+				if err != nil {
+					err = errors.WithStack(err)
+					logger.Error.Printf("%+v", err)
+					return nil,err
+				}
+				if {{.TableNameLowerCamel}}.{{(index .PrimaryKeyFields 0).FieldName}}.{{(index .PrimaryKeyFields 0).FieldNullTypeValue}} == {{(index .PrimaryKeyFields 0).FieldTypeDefault}} {
+					return nil,nil
+				}
+				return &{{.TableNameLowerCamel}},nil
+			}
+			{{if eq (len .PrimaryKeyFields) 1}} 
+			func QueryMapByPrimaryKeys(primaryKeys []interface{}) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
+				gen := gsql.NewGenerator().From(model.TABLE_NAME).Where(gsql.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, primaryKeys))
+				sql, param, err := gen.SelectSql(true)
+				if err == nil {
+					err = errors.WithStack(err)
+					logger.Error.Printf("%+v", err)
+					return nil,err
+				}
+				{{.TableNameLowerCamel}}s := make([]model.{{.TableNameUpperCamel}}Model, 0)
+				err = gdb.PrepareQuery(sql, param, &{{.TableNameLowerCamel}}s)
+				if err == nil {
+					err = errors.WithStack(err)
+					logger.Error.Printf("%+v", err)
+					return nil,err
+				}
+				if {{.TableNameLowerCamel}}s == nil || len({{.TableNameLowerCamel}}s) == 0 {
+					return nil,nil
+				}
+				{{.TableNameLowerCamel}}Map := make(map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, len({{.TableNameLowerCamel}}s))
+				for _, {{.TableNameLowerCamel}} := range {{.TableNameLowerCamel}}s {
+					{{.TableNameLowerCamel}}Map[{{.TableNameLowerCamel}}.{{(index .PrimaryKeyFields 0).FieldName}}.{{(index .PrimaryKeyFields 0).FieldNullTypeValue}}] = {{.TableNameLowerCamel}}
+				}
+				return {{.TableNameLowerCamel}}Map,nil
+			}
+			{{end}}
+			
+			
+			func CountByGsql(gen *gsql.Generator) (int64, error) {
+				sql, params, err := gen.CountSql(true)
+				if err != nil {
+					err = errors.WithStack(err)
+					logger.Error.Printf("%+v", err)
+					return 0,err
+				}
+				count, err := gdb.PrepareCount(sql, params)
+				if err != nil {
+					err = errors.WithStack(err)
+					logger.Error.Printf("%+v", err)
+					return 0,err
+				}
+				return count,nil
+			}
+			
+			// 通过gsql 查询
+			func QueryByGsql(gen *gsql.Generator) ([]model.{{.TableNameUpperCamel}}Model, error) {
+				sql, params, err := gen.SelectSql(true)
+				if err != nil {
+					err = errors.WithStack(err)
+					logger.Error.Printf("%+v", err)
+					return nil,err
+				}
+				{{.TableNameLowerCamel}}s := make([]model.{{.TableNameUpperCamel}}Model, 0)
+				err = gdb.PrepareQuery(sql, params, &{{.TableNameLowerCamel}}s)
+				if err != nil {
+					err = errors.WithStack(err)
+					logger.Error.Printf("%+v", err)
+					return nil,err
+				}
+				return {{.TableNameLowerCamel}}s,nil
+			}
+			
+			// 通过gsql 查询 第一条
+			func QueryFirstByGsql(gen *gsql.Generator) (*model.{{.TableNameUpperCamel}}Model, error) {
+				sql, params, err := gen.SelectSql(true)
+				if err != nil {
+					err = errors.WithStack(err)
+					logger.Error.Printf("%+v", err)
+					return nil,err
+				}
+				var {{.TableNameLowerCamel}} model.{{.TableNameUpperCamel}}Model
+				err = gdb.PrepareFirst(sql, params, &{{.TableNameLowerCamel}})
+				if err != nil {
+					err = errors.WithStack(err)
+					logger.Error.Printf("%+v", err)
+					return nil,err
+				}
+				if {{.TableNameLowerCamel}}.{{(index .PrimaryKeyFields 0).FieldName}}.{{(index .PrimaryKeyFields 0).FieldNullTypeValue}} == {{(index .PrimaryKeyFields 0).FieldTypeDefault}} {
+					return nil,nil
+				}
+				return &{{.TableNameLowerCamel}},nil
+			}
+			
+			
+			// 通过gsql 查询
+			func QueryExtendByGsql(gen *gsql.Generator) ([]model.{{.TableNameUpperCamel}}Extend, error) {
+				sql, params, err := gen.SelectSql(true)
+				if err != nil {
+					err = errors.WithStack(err)
+					logger.Error.Printf("%+v", err)
+					return nil,err
+				}
+				{{.TableNameLowerCamel}}Extends := make([]model.{{.TableNameUpperCamel}}Extend, 0)
+				err = gdb.PrepareQuery(sql, params, &{{.TableNameLowerCamel}}Extends)
+				if err != nil {
+					err = errors.WithStack(err)
+					logger.Error.Printf("%+v", err)
+					return nil,err
+				}
+				return {{.TableNameLowerCamel}}Extends,nil
+			}
+			
+			func Insert({{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model) (int64, error) {
+				sql, params, err := {{.TableNameLowerCamel}}.InsertSql()
+				if err != nil {
+					err = errors.WithStack(err)
+					logger.Error.Printf("%+v", err)
+					return 0,err
+				}
+				id, err := gdb.PrepareInsert(sql, params)
+				if err != nil {
+					err = errors.WithStack(err)
+					logger.Error.Printf("%+v", err)
+					return 0,err
+				}
+				return id,nil
+			}
+			func Update({{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model) (int64, error) {
+				sql, param, err := {{.TableNameLowerCamel}}.UpdateSql()
+				if err != nil {
+					logger.Error.Printf("%+v", err)
+					return 0,err
+				}
+				count, err := gdb.PrepareUpdate(sql, param)
+				if err != nil {
+					err = errors.WithStack(err)
+					logger.Error.Printf("%+v", err)
+					return 0,err
+				}
+				return count,nil
+			}
+			func UpdateBySelective({{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model) (int64, error) {
+				sql, param, err := {{.TableNameLowerCamel}}.UpdateSqlBySelective()
+				if err != nil {
+					err = errors.WithStack(err)
+					logger.Error.Printf("%+v", err)
+					return 0,err
+				}
+				count, err := gdb.PrepareUpdate(sql, param)
+				if err != nil {
+					err = errors.WithStack(err)
+					logger.Error.Printf("%+v", err)
+					return 0,err
+				}
+				return count,nil
+			}
+			
+			
+			// 通过gsql修改
+			func UpdateBySql(sql string, params []interface{}) (int64, error) {
+				count, err := gdb.PrepareUpdate(sql, params)
+				if err != nil {
+					err = errors.WithStack(err)
+					logger.Error.Printf("%+v", err)
+					return 0, err
+				}
+				return count, nil
+			}`
+}
+func getController() string {
+	return `// Create by code generator  {{.CreateTime}}
+			package controller
+			
+			import (
+				"net/http"
+			
+				"github.com/gin-gonic/gin"
+			)
+			
+			func Index(g *gin.Context) {
+				data := gin.H{
+					"code": 200,
+				}
+				g.JSON(http.StatusOK, data)
+			}`
 }

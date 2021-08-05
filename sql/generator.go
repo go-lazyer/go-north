@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 )
 
@@ -258,6 +259,8 @@ func (s *Generator) BatchInsertSql(prepare bool) (string, []interface{}, error) 
 	return sql.String(), params, nil
 }
 func (s *Generator) BatchUpdateSql(prepare bool) (string, []interface{}, error) {
+
+
 	if s.tableName == "" {
 		return "", nil, errors.New("tableName is not null")
 	}
