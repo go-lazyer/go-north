@@ -141,7 +141,7 @@ fmt.Println(gen.UpdateSql(false))
 // 		when 10003 then hanmeimei
 // 	end
 // where
-// 		user.dwid in('10001', '10002', '10003')
+// 	user.dwid in('10001', '10002', '10003')
 
 f1 := map[string]interface{}{
   "name": "lilie",
@@ -214,150 +214,11 @@ code-gengrator 模块主要用于生成数据库表对应的struct，以及dao�
 
 #### 文件介绍
 
-1. model 文件
-
-```go
-// Create by code generator  2021-08:06 16:27:45.021
-package model
-
-import (
-	"bytes"
-	"database/sql"
-	"errors"
-)
-
-const (
-	ID   = "id"   // 编号
-	NAME = "name" // 姓名
-	AGE  = "age"  // 年龄
-	SEX  = "sex"  // 性别
-
-	TABLE_NAME = "test" // 表名
-)
-
-type TestModel struct {
-	Id   sql.NullInt32  `orm:"id" default:"0"` // 编号
-	Name sql.NullString `orm:"name" `          // 姓名
-	Age  sql.NullInt32  `orm:"age" `           // 年龄
-	Sex  sql.NullString `orm:"sex" `           // 性别
-
-}
-
-func (m *TestModel) UpdateSql() (string, []interface{}, error) {
-
-	if !m.Id.Valid {
-		return "", nil, errors.New("Id is not null")
-	}
-
-	params := make([]interface{}, 0, 4)
-	var sql bytes.Buffer
-	sql.WriteString("update `test` ")
-	sql.WriteString("set `name` = ?,`age` = ?,`sex` = ? ")
-
-	nameV, err := m.Name.Value()
-	if nameV == nil || err != nil {
-		params = append(params, nil)
-	} else {
-		params = append(params, nameV)
-	}
-
-	ageV, err := m.Age.Value()
-	if ageV == nil || err != nil {
-		params = append(params, nil)
-	} else {
-		params = append(params, ageV)
-	}
-
-	sexV, err := m.Sex.Value()
-	if sexV == nil || err != nil {
-		params = append(params, nil)
-	} else {
-		params = append(params, sexV)
-	}
-
-	sql.WriteString(" where  `id` = ? ")
-	params = append(params, m.Id.Int32)
-	return sql.String(), params, nil
-}
-
-func (m *TestModel) UpdateSqlBySelective() (string, []interface{}, error) {
-	if !m.Id.Valid {
-		return "", nil, errors.New("Id is not null")
-	}
-
-	params := make([]interface{}, 0, 4)
-	var sql bytes.Buffer
-	sql.WriteString("update `test` ")
-
-	sql.WriteString(" set ")
-
-	if m.Id.Valid {
-		sql.WriteString(" `id` = ? ")
-		params = append(params, m.Id.Int32)
-	}
-
-	if m.Name.Valid {
-		sql.WriteString(", `name` = ? ")
-		params = append(params, m.Name.String)
-	}
-
-	if m.Age.Valid {
-		sql.WriteString(", `age` = ? ")
-		params = append(params, m.Age.Int32)
-	}
-
-	if m.Sex.Valid {
-		sql.WriteString(", `sex` = ? ")
-		params = append(params, m.Sex.String)
-	}
-
-	sql.WriteString(" where  `id` = ? ")
-
-	params = append(params, m.Id.Int32)
-	return sql.String(), params, nil
-}
-
-func (m *TestModel) InsertSql() (string, []interface{}, error) {
-	params := make([]interface{}, 0, 4)
-	var sql bytes.Buffer
-	sql.WriteString("insert into `test` ")
-	sql.WriteString(" ( `id` ,`name` ,`age` ,`sex`)")
-	sql.WriteString("values ( ? ,? ,? ,?)")
-
-	idV, err := m.Id.Value()
-	if idV == nil || err != nil {
-		params = append(params, "0")
-	} else {
-		params = append(params, idV)
-	}
-
-	nameV, err := m.Name.Value()
-	if nameV == nil || err != nil {
-		params = append(params, nil)
-	} else {
-		params = append(params, nameV)
-	}
-
-	ageV, err := m.Age.Value()
-	if ageV == nil || err != nil {
-		params = append(params, nil)
-	} else {
-		params = append(params, ageV)
-	}
-
-	sexV, err := m.Sex.Value()
-	if sexV == nil || err != nil {
-		params = append(params, nil)
-	} else {
-		params = append(params, sexV)
-	}
-
-	return sql.String(), params, nil
-}
-
-```
-
-
+1. model 文件,struct 所在文件，每次都会更新。
+2. extend文件，model的扩展文件，用于接收联表查询的返回值，只生成一次。
+3. view文件，提供接口时，接口中的返回值，和model 独立，只生成一次。
+4. param文件，提供接口时，用于接收接口的参数，只生成一次。
+5. dao文件，提供一些常用的增删改查方法，只生成一次。
 
 #### 使用教程
 
@@ -404,9 +265,7 @@ func main() {
 			ControllerFileName:    "user_controller.go",                   //Controller层文件名
 		},
 	}
-
 	generator.NewGenerator().Dsn(dsn).Project("lazyer").Gen(tables)
 }
-
 ```
 
