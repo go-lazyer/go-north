@@ -765,6 +765,7 @@ func getDaoTemplate() string {
 				return count, nil
 			}`
 }
+
 func getController() string {
 	return `// Create by code generator  {{.CreateTime}}
 			package controller
