@@ -616,7 +616,7 @@ func getDaoTemplate() string {
 			// query map by primaryKeys
 			func QueryMapByPrimaryKeys(primaryKeys []interface{}) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, primaryKeys))
-				sqlStr, param, err := gen.SelectSql(true)
+				sqlStr, params, err := gen.SelectSql(true)
 				if err == nil {
 					err = errors.WithStack(err)
 					return nil,err
@@ -638,7 +638,7 @@ func getDaoTemplate() string {
 			// query map by sql
 			func QueryMapBySql(sqlStr string, params []interface{}) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
 				{{.TableNameLowerCamel}}s := make([]model.{{.TableNameUpperCamel}}Model, 0)
-				err = dbutil.PrepareQuery(sqlStr, param, &{{.TableNameLowerCamel}}s,&sql.DB{})
+				err := dbutil.PrepareQuery(sqlStr, params, &{{.TableNameLowerCamel}}s,&sql.DB{})
 				if err == nil {
 					err = errors.WithStack(err)
 					return nil,err
