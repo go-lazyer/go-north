@@ -36,11 +36,11 @@ type Module struct {
 	ModulePath          string //模块名用于生成文件名
 	Fields              []Field
 	PrimaryKeyFields    []Field //主键
-
-	ModelFilePath    string //全路径，不包含文件名
-	ModelFileName    string //只有文件名
-	ModelPackageName string //只有包名，不包含文件名
-	ModelPackagePath string //包含完整的包名
+	Model               bool
+	ModelFilePath       string //全路径，不包含文件名
+	ModelFileName       string //只有文件名
+	ModelPackageName    string //只有包名，不包含文件名
+	ModelPackagePath    string //包含完整的包名
 
 	Extend            bool
 	ExtendFilePath    string //全路径，不包含文件名
@@ -227,7 +227,7 @@ func (gen *Generator) Gen(modules []Module) error {
 		if module.ModelPackageName == "" {
 			module.ModelPackageName = "model"
 		}
-		
+
 		module.ModelPackagePath = gen.project + urls[1] + "/" + module.ModelPackageName
 		module.ModelFileName = tableName + "_" + module.ModelPackageName + ".go"
 		module.ModelFilePath = module.ModulePath + "/" + module.ModelPackageName
@@ -262,7 +262,9 @@ func (gen *Generator) Gen(modules []Module) error {
 		module.ControllerFileName = tableName + "_" + module.ControllerPackageName + ".go"
 		module.ControllerFilePath = module.ModulePath + "/" + module.ControllerPackageName
 
-		genFile(&module, module.ModelPackageName)
+		if module.Model {
+			genFile(&module, module.ModelPackageName)
+		}
 		if module.Extend {
 			genFile(&module, module.ExtendPackageName)
 		}

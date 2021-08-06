@@ -210,6 +210,203 @@ fmt.Print(gen.BatchInsertSql(false))
 
 ### 四、code-gengrator
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+code-gengrator 模块主要用于生成数据库表对应的struct，以及dao文件，同时会生成相关的附属类文件
+
+#### 文件介绍
+
+1. model 文件
+
+```go
+// Create by code generator  2021-08:06 16:27:45.021
+package model
+
+import (
+	"bytes"
+	"database/sql"
+	"errors"
+)
+
+const (
+	ID   = "id"   // 编号
+	NAME = "name" // 姓名
+	AGE  = "age"  // 年龄
+	SEX  = "sex"  // 性别
+
+	TABLE_NAME = "test" // 表名
+)
+
+type TestModel struct {
+	Id   sql.NullInt32  `orm:"id" default:"0"` // 编号
+	Name sql.NullString `orm:"name" `          // 姓名
+	Age  sql.NullInt32  `orm:"age" `           // 年龄
+	Sex  sql.NullString `orm:"sex" `           // 性别
+
+}
+
+func (m *TestModel) UpdateSql() (string, []interface{}, error) {
+
+	if !m.Id.Valid {
+		return "", nil, errors.New("Id is not null")
+	}
+
+	params := make([]interface{}, 0, 4)
+	var sql bytes.Buffer
+	sql.WriteString("update `test` ")
+	sql.WriteString("set `name` = ?,`age` = ?,`sex` = ? ")
+
+	nameV, err := m.Name.Value()
+	if nameV == nil || err != nil {
+		params = append(params, nil)
+	} else {
+		params = append(params, nameV)
+	}
+
+	ageV, err := m.Age.Value()
+	if ageV == nil || err != nil {
+		params = append(params, nil)
+	} else {
+		params = append(params, ageV)
+	}
+
+	sexV, err := m.Sex.Value()
+	if sexV == nil || err != nil {
+		params = append(params, nil)
+	} else {
+		params = append(params, sexV)
+	}
+
+	sql.WriteString(" where  `id` = ? ")
+	params = append(params, m.Id.Int32)
+	return sql.String(), params, nil
+}
+
+func (m *TestModel) UpdateSqlBySelective() (string, []interface{}, error) {
+	if !m.Id.Valid {
+		return "", nil, errors.New("Id is not null")
+	}
+
+	params := make([]interface{}, 0, 4)
+	var sql bytes.Buffer
+	sql.WriteString("update `test` ")
+
+	sql.WriteString(" set ")
+
+	if m.Id.Valid {
+		sql.WriteString(" `id` = ? ")
+		params = append(params, m.Id.Int32)
+	}
+
+	if m.Name.Valid {
+		sql.WriteString(", `name` = ? ")
+		params = append(params, m.Name.String)
+	}
+
+	if m.Age.Valid {
+		sql.WriteString(", `age` = ? ")
+		params = append(params, m.Age.Int32)
+	}
+
+	if m.Sex.Valid {
+		sql.WriteString(", `sex` = ? ")
+		params = append(params, m.Sex.String)
+	}
+
+	sql.WriteString(" where  `id` = ? ")
+
+	params = append(params, m.Id.Int32)
+	return sql.String(), params, nil
+}
+
+func (m *TestModel) InsertSql() (string, []interface{}, error) {
+	params := make([]interface{}, 0, 4)
+	var sql bytes.Buffer
+	sql.WriteString("insert into `test` ")
+	sql.WriteString(" ( `id` ,`name` ,`age` ,`sex`)")
+	sql.WriteString("values ( ? ,? ,? ,?)")
+
+	idV, err := m.Id.Value()
+	if idV == nil || err != nil {
+		params = append(params, "0")
+	} else {
+		params = append(params, idV)
+	}
+
+	nameV, err := m.Name.Value()
+	if nameV == nil || err != nil {
+		params = append(params, nil)
+	} else {
+		params = append(params, nameV)
+	}
+
+	ageV, err := m.Age.Value()
+	if ageV == nil || err != nil {
+		params = append(params, nil)
+	} else {
+		params = append(params, ageV)
+	}
+
+	sexV, err := m.Sex.Value()
+	if sexV == nil || err != nil {
+		params = append(params, nil)
+	} else {
+		params = append(params, sexV)
+	}
+
+	return sql.String(), params, nil
+}
+
+```
+
+
+
+#### 使用教程
+
+新建main方法，配置需要生成代码的表(支持配置多个)，运行即可生成代码
+
+```go
+package main
+
+import (
+	generator "github.com/go-lazyer/go-generator/code"
+	_ "github.com/go-sql-driver/mysql"
+)
+
+func main() {
+	dsn := "root:123@tcp(localhost:3306)/test?charset=utf8mb4&parseTime=true&loc=Local"
+	var tables = []Module{
+		{//最小配置
+		 	TableName:  "user",
+		 	ModulePath: "/Users/Hch/Workspace/lazyer/api/user",
+		},
+    { //完整配置
+			TableName:             "user",                                 //表名
+			ModulePath:            "/Users/Hch/Workspace/lazyer/api/user", //相对路径，包含项目名
+			Model:                 true,                                   //是否生成Model层代码
+			ModelPackageName:      "model",                                //Model层包名
+			ModelFileName:         "user_model.go",                        //Model层文件名
+			Extend:                true,                                   //是否生成层代码
+			ExtendPackageName:     "extend",                               //Extend包名
+			ExtendFileName:        "user_extend.go",                       //Extend文件名
+			Param:                 true,                                   //是否生成Param代码
+			ParamPackageName:      "param",                                //Param包名
+			ParamFileName:         "user_param.go",                        //Param文件名
+			View:                  true,                                   //是否生成View代码
+			ViewPackageName:       "view",                                 //View包名
+			ViewFileName:          "user_view.go",                         //View文件名
+			Dao:                   true,                                   //是否生成Dao代码
+			DaoPackageName:        "dao",                                  //Dao层包名
+			DaoFileName:           "user_dao.go",                          //Dao层文件名
+			Service:               true,                                   //是否生成Service层代码
+			ServicePackageName:    "service",                              //Service层包名
+			ServiceFileName:       "user_service.go",                      //Service层文件名
+			Controller:            true,                                   //是否生成Controller层代码
+			ControllerPackageName: "controller",                           //Controller层包名
+			ControllerFileName:    "user_controller.go",                   //Controller层文件名
+		},
+	}
+
+	generator.NewGenerator().Dsn(dsn).Project("lazyer").Gen(tables)
+}
+
+```
+
