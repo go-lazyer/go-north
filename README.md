@@ -123,26 +123,25 @@ fmt.Println(gen.UpdateSql(false))
 7. 批量更新
 
 ```go
-// update
-// `user`
+// update `user`
 // set
-// 	sex = case dwid
-// 	when 10001 then boy
-// 	when 10002 then boy
-// 	when 10003 then girl
-// 	end,
+// 	name = case dwid
+// 		when 10001 then boy
+// 		when 10002 then boy
+// 		when 10003 then girl
+// 		end,
 // 	age = case dwid
-// 	when 10001 then 10
-// 	when 10002 then 20
-// 	when 10003 then 30
+// 		when 10001 then 10
+// 		when 10002 then 20
+// 		when 10003 then 30
 // 	end,
 // 	name = case dwid
-// 	when 10001 then lilie
-// 	when 10002 then lining
-// 	when 10003 then hanmeimei
+// 		when 10001 then lilie
+// 		when 10002 then lining
+// 		when 10003 then hanmeimei
 // 	end
 // where
-// 	user.dwid in('10001', '10002', '10003')
+// 		user.dwid in('10001', '10002', '10003')
 
 f1 := map[string]interface{}{
   "name": "lilie",
