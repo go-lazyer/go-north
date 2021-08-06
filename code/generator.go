@@ -288,36 +288,6 @@ func (gen *Generator) Gen(modules []Module) error {
 	return nil
 }
 
-// func genSql(module *Module) {
-// 	var sql bytes.Buffer
-// 	var updateSelectiveSql bytes.Buffer
-// 	sql.WriteString("update " + module.TableName + " set")
-// 	updateSelectiveSql.WriteString("update " + module.TableName + " set")
-
-// 	for i, field := range module.Fields {
-// 		if field.IsPrimaryKey == 1 {
-// 			continue
-// 		}
-// 		sql.WriteString(" `" + field.ColumnName + "` = ?")
-// 		if i != len(module.Fields)-1 {
-// 			sql.WriteString(",")
-// 		}
-// 	}
-// 	sql.WriteString(" where ")
-// 	for i, field := range module.Fields {
-// 		if field.IsPrimaryKey != 1 {
-// 			continue
-// 		}
-// 		if i != 0 {
-// 			sql.WriteString(" and ")
-// 			updateSelectiveSql.WriteString(" and ")
-// 		}
-// 		sql.WriteString("`" + field.ColumnName + "` = ?")
-// 		updateSelectiveSql.WriteString("`" + field.ColumnName + "` = ?")
-// 	}
-// 	module.UpdateSql = sql.String()
-// 	module.UpdateSelectiveSql = updateSelectiveSql.String()
-// }
 func genFile(table *Module, packageName string) {
 
 	var templateStr, filePath, file string
