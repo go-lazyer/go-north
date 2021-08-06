@@ -8,8 +8,11 @@ func TestGenModel(t *testing.T) {
 	dsn := "root:123@tcp(localhost:3306)/test?charset=utf8mb4&parseTime=true&loc=Local"
 	var tables = []Module{
 		{
-			TableName:  "user",
-			ModulePath: "/Users/Hch/Workspace/lazyer/api/user", //相对路径，包含项目名
+			TableName:        "user",
+			ModulePath:       "/Users/Hch/Workspace/lazyer/api/user", //相对路径，包含项目名
+			Controller:       false,
+			ModelPackageName: "model",
+			ModelFileName:    "font_model.go",
 		},
 		// {
 		// 	TableName:  "order",
@@ -17,5 +20,5 @@ func TestGenModel(t *testing.T) {
 		// },
 	}
 
-	NewGenerator().Dsn(dsn).Project("lazyer").Run(tables)
+	NewGenerator().Dsn(dsn).Project("lazyer").Gen(tables)
 }

@@ -1,8 +1,8 @@
 package generator
 
 import (
-	"bytes"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -36,44 +36,51 @@ type Module struct {
 	ModulePath          string //模块名用于生成文件名
 	Fields              []Field
 	PrimaryKeyFields    []Field //主键
-	ModelFilePath       string  //全路径，不包含文件名
-	ModelFileName       string  //只有文件名
-	ModelPackageName    string  //只有包名，不包含文件名
-	ModelPackagePath    string  //包含完整的包名
 
+	ModelFilePath    string //全路径，不包含文件名
+	ModelFileName    string //只有文件名
+	ModelPackageName string //只有包名，不包含文件名
+	ModelPackagePath string //包含完整的包名
+
+	Extend            bool
 	ExtendFilePath    string //全路径，不包含文件名
 	ExtendFileName    string //只有文件名
 	ExtendPackageName string //只有包名，不包含文件名
 	ExtendPackagePath string //包含完整的包名
 
+	View            bool
 	ViewFilePath    string
 	ViewFileName    string
 	ViewPackageName string
 	ViewPackagePath string
 
+	Param            bool
 	ParamFilePath    string
 	ParamFileName    string
 	ParamPackageName string
 	ParamPackagePath string
 
+	Dao            bool
 	DaoFilePath    string
 	DaoFileName    string
 	DaoPackageName string
 	DaoPackagePath string
 
+	Service            bool
 	ServiceFilePath    string
 	ServiceFileName    string
 	ServicePackageName string
 	ServicePackagePath string
 
+	Controller            bool
 	ControllerFilePath    string
 	ControllerFileName    string
 	ControllerPackageName string
 	ControllerPackagePath string
 
-	UpdateSql          string
-	UpdateSelectiveSql string
-	CreateTime         string
+	// UpdateSql          string
+	// UpdateSelectiveSql string
+	CreateTime string
 }
 
 type Field struct {
@@ -141,17 +148,6 @@ type goType struct {
 	defaultValue  string
 }
 
-func (gen *Generator) dialMysql() *sql.DB {
-	if gen.dsn == "" {
-		panic("dsn数据库配置缺失")
-	}
-	db, err := sql.Open("mysql", gen.dsn)
-	if err != nil {
-		panic(err)
-	}
-	return db
-}
-
 func getFields(tableName string, db *sql.DB) ([]Field, []Field, error) {
 	var sqlStr = `select
 					column_name name,
@@ -200,22 +196,38 @@ func getFields(tableName string, db *sql.DB) ([]Field, []Field, error) {
 	return fields, primaryKeyFields, nil
 }
 
-func (gen *Generator) Run(modules []Module) error {
-	db := gen.dialMysql()
+func (gen *Generator) Gen(modules []Module) error {
+	if gen.project == "" {
+		return errors.New("project can not nil")
+	}
+	if gen.dsn == "" {
+		return errors.New("dsn can not nil")
+	}
+	db, err := sql.Open("mysql", gen.dsn)
+	if err != nil {
+		return err
+	}
+	if modules == nil {
+		return errors.New("modules can not nil")
+	}
 
 	for _, module := range modules {
 		fields, primaryKeyFields, err := getFields(module.TableName, db)
 		if err != nil {
 			return err
 		}
-		tableName := strings.ReplaceAll(module.TableName, "p_", "")
+		tableName := module.TableName
 		module.CreateTime = time.Now().Format("2006-01:02 15:04:05.006")
 		module.Fields = fields
 		module.PrimaryKeyFields = primaryKeyFields
 		module.TableNameUpperCamel = ToUpperCamelCase(tableName)
 		module.TableNameLowerCamel = ToLowerCamelCase(tableName)
 		urls := strings.Split(module.ModulePath, gen.project)
-		module.ModelPackageName = "model"
+
+		if module.ModelPackageName == "" {
+			module.ModelPackageName = "model"
+		}
+		
 		module.ModelPackagePath = gen.project + urls[1] + "/" + module.ModelPackageName
 		module.ModelFileName = tableName + "_" + module.ModelPackageName + ".go"
 		module.ModelFilePath = module.ModulePath + "/" + module.ModelPackageName
@@ -251,46 +263,59 @@ func (gen *Generator) Run(modules []Module) error {
 		module.ControllerFilePath = module.ModulePath + "/" + module.ControllerPackageName
 
 		genFile(&module, module.ModelPackageName)
-		genFile(&module, module.ExtendPackageName)
-		genFile(&module, module.ViewPackageName)
-		genFile(&module, module.ParamPackageName)
-		genFile(&module, module.DaoPackageName)
-		genFile(&module, module.ServicePackageName)
-		genFile(&module, module.ControllerPackageName)
+		if module.Extend {
+			genFile(&module, module.ExtendPackageName)
+		}
+		if module.View {
+			genFile(&module, module.ViewPackageName)
+		}
+		if module.Param {
+			genFile(&module, module.ParamPackageName)
+		}
+		if module.Dao {
+			genFile(&module, module.DaoPackageName)
+		}
+		if module.Service {
+			genFile(&module, module.ServicePackageName)
+		}
+		if module.Controller {
+			genFile(&module, module.ControllerPackageName)
+		}
 
 	}
 	return nil
 }
-func genSql(module *Module) {
-	var sql bytes.Buffer
-	var updateSelectiveSql bytes.Buffer
-	sql.WriteString("update " + module.TableName + " set")
-	updateSelectiveSql.WriteString("update " + module.TableName + " set")
 
-	for i, field := range module.Fields {
-		if field.IsPrimaryKey == 1 {
-			continue
-		}
-		sql.WriteString(" `" + field.ColumnName + "` = ?")
-		if i != len(module.Fields)-1 {
-			sql.WriteString(",")
-		}
-	}
-	sql.WriteString(" where ")
-	for i, field := range module.Fields {
-		if field.IsPrimaryKey != 1 {
-			continue
-		}
-		if i != 0 {
-			sql.WriteString(" and ")
-			updateSelectiveSql.WriteString(" and ")
-		}
-		sql.WriteString("`" + field.ColumnName + "` = ?")
-		updateSelectiveSql.WriteString("`" + field.ColumnName + "` = ?")
-	}
-	module.UpdateSql = sql.String()
-	module.UpdateSelectiveSql = updateSelectiveSql.String()
-}
+// func genSql(module *Module) {
+// 	var sql bytes.Buffer
+// 	var updateSelectiveSql bytes.Buffer
+// 	sql.WriteString("update " + module.TableName + " set")
+// 	updateSelectiveSql.WriteString("update " + module.TableName + " set")
+
+// 	for i, field := range module.Fields {
+// 		if field.IsPrimaryKey == 1 {
+// 			continue
+// 		}
+// 		sql.WriteString(" `" + field.ColumnName + "` = ?")
+// 		if i != len(module.Fields)-1 {
+// 			sql.WriteString(",")
+// 		}
+// 	}
+// 	sql.WriteString(" where ")
+// 	for i, field := range module.Fields {
+// 		if field.IsPrimaryKey != 1 {
+// 			continue
+// 		}
+// 		if i != 0 {
+// 			sql.WriteString(" and ")
+// 			updateSelectiveSql.WriteString(" and ")
+// 		}
+// 		sql.WriteString("`" + field.ColumnName + "` = ?")
+// 		updateSelectiveSql.WriteString("`" + field.ColumnName + "` = ?")
+// 	}
+// 	module.UpdateSql = sql.String()
+// 	module.UpdateSelectiveSql = updateSelectiveSql.String()
+// }
 func genFile(table *Module, packageName string) {
 
 	var templateStr, filePath, file string
