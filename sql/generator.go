@@ -325,7 +325,7 @@ func (s *Generator) BatchUpdateSql(prepare bool) (string, []interface{}, error) 
 		if n != 0 {
 			sql.WriteString(",")
 		}
-		sql.WriteString(fmt.Sprintf("%v = CASE '%v'", field, s.primary))
+		sql.WriteString(fmt.Sprintf("%v = CASE %v", field, s.primary))
 		for id, setMap := range s.updates {
 			v, ok := setMap[field]
 			if !ok {
