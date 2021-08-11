@@ -164,14 +164,17 @@ func (s *Generator) SelectSql(prepare bool) (string, []interface{}, error) {
 	}
 
 	if s.querys != nil && len(s.querys) > 0 {
-		sql.WriteString(" where   ")
+		var source string
+		var param []interface{}
 		for i, query := range s.querys {
 			if i != 0 {
 				sql.WriteString(" or ")
 			}
-			source, param, _ := query.Source(s.tableName, prepare)
-			sql.WriteString(" " + source + " ")
+			source, param, _ = query.Source(s.tableName, prepare)
 			params = append(params, param...)
+		}
+		if strings.TrimSpace(source) != "" {
+			sql.WriteString(" where   " + source + " ")
 		}
 	}
 
