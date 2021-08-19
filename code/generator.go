@@ -760,6 +760,45 @@ func getDaoTemplate() string {
 					return 0, err
 				}
 				return count, nil
+			}
+			func DeleteByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} interface{}  {{end}}) (int64, error) {
+				{{ if eq (len .PrimaryKeyFields) 1 -}} 
+				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}}))
+				{{ else -}}
+				query := generator.NewBoolQuery(){{range $field := .PrimaryKeyFields}} .And(generator.NewEqualQuery(model.{{ .ColumnNameUpper }}, {{ .ColumnNameLowerCamel }})) {{end}}
+				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(query)
+				{{ end -}}
+				sqlStr, params, err := gen.DeleteSql(true)
+				if err != nil {
+					err = errors.WithStack(err)
+					return 0, err
+				}
+				return DeleteBySql(sqlStr, params)
+			}
+			func DeleteByPrimaryKeys(primaryKeys []interface{}) (int64, error) {
+				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, primaryKeys))
+				sqlStr, params, err := gen.DeleteSql(true)
+				if err != nil {
+					err = errors.WithStack(err)
+					return 0, err
+				}
+				return DeleteBySql(sqlStr, params)
+			}
+			func DeleteByGen(gen *generator.Generator) (int64, error) {
+				sqlStr, params, err := gen.DeleteSql(true)
+				if err != nil {
+					err = errors.WithStack(err)
+					return 0, err
+				}
+				return DeleteBySql(sqlStr, params)
+			}
+			func DeleteBySql(sqlStr string, params []interface{}) (int64, error) {
+				count, err := dbutil.PrepareDelete(sqlStr, params, &sql.DB{})
+				if err != nil {
+					err = errors.WithStack(err)
+					return 0, err
+				}
+				return count, nil
 			}`
 }
 

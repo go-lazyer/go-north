@@ -131,6 +131,26 @@ func PrepareUpdate(sql string, params []interface{}, db *sql.DB) (int64, error) 
 	return n, nil
 }
 
+func PrepareDelete(sql string, params []interface{}, db *sql.DB) (int64, error) {
+	if db == nil {
+		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
+	}
+	serverMode := os.Getenv("server.mode")
+	if serverMode == "dev" {
+		fmt.Printf("sql is %v", sql)
+		fmt.Printf("params is %v", params)
+	}
+	ret, err := db.Exec(sql, params...)
+	if err != nil {
+		return 0, err
+	}
+	n, err := ret.RowsAffected() // 操作影响的行数
+	if err != nil {
+		return 0, err
+	}
+	return n, nil
+}
+
 func getFieldInfo(typ reflect.Type) map[string][]int {
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()

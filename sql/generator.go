@@ -201,6 +201,31 @@ func (s *Generator) SelectSql(prepare bool) (string, []interface{}, error) {
 
 	return sql.String(), params, nil
 }
+
+func (s *Generator) DeleteSql(prepare bool) (string, []interface{}, error) {
+	if s.tableName == "" {
+		return "", nil, errors.New("tableName is not null")
+	}
+	if s.querys == nil || len(s.querys) == 0 {
+		return "", nil, errors.New("warn: query is not null")
+	}
+	params := make([]interface{}, 0, 10)
+	var sql bytes.Buffer
+	sql.WriteString("delete from `" + s.tableName + "` ")
+
+	sql.WriteString(" where   ")
+	for i, query := range s.querys {
+		if i != 0 {
+			sql.WriteString(" or ")
+		}
+		source, param, _ := query.Source(s.tableName, prepare)
+		sql.WriteString(" " + source + " ")
+		params = append(params, param...)
+	}
+
+	return sql.String(), params, nil
+}
+
 func (s *Generator) UpdateSql(prepare bool) (string, []interface{}, error) {
 	if s.tableName == "" {
 		return "", nil, errors.New("tableName is not null")
