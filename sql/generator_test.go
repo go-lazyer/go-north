@@ -52,7 +52,7 @@ func TestGenerator_UpdateSql(t *testing.T) {
 		"age":  21,
 		"name": "lazyer",
 	}
-	gen := NewGenerator().Table("user").Where(query).Set(set)
+	gen := NewGenerator().Table("user").Where(query).Update(set)
 	fmt.Println(gen.UpdateSql(false))
 }
 

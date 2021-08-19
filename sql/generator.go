@@ -40,7 +40,7 @@ func (s *Generator) Where(query ...Query) *Generator {
 	return s
 }
 
-func (s *Generator) Set(m map[string]interface{}) *Generator {
+func (s *Generator) Update(m map[string]interface{}) *Generator {
 	s.update = m
 	return s
 }
