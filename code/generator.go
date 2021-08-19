@@ -528,9 +528,8 @@ func getModelTemplate() string {
 		return sql.String(), params, nil
 	}
 	
-	
 	func (m *{{.TableNameUpperCamel}}Model) InsertSql() (string, []interface{}, error) {
-		str, params := m.format("` + " `%v`" + `", false)
+		str, params := m.format("` + " `%v`" + `", true)
 		var sql bytes.Buffer
 		sql.WriteString(fmt.Sprintf("insert into ` + "`{{.TableName}}`" + ` (%v) values (", str))
 		
@@ -543,6 +542,15 @@ func getModelTemplate() string {
 		}
 		sql.WriteString(")")
 		
+		return sql.String(), params, nil
+	}
+
+	func (m *{{.TableNameUpperCamel}}Model) SaveSql() (string, []interface{}, error) {
+		insertStr, params, _ := m.InsertSql()
+		var sql bytes.Buffer
+		updateStr, params := m.format("` + " `%v`" + `", true)
+		sql.WriteString(fmt.Sprintf("%v on duplicate key update %v", insertStr, updateStr))
+	
 		return sql.String(), params, nil
 	}`
 }
