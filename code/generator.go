@@ -214,7 +214,12 @@ func (gen *Generator) Gen(modules []Module) error {
 	for _, module := range modules {
 		fields, primaryKeyFields, err := getFields(module.TableName, db)
 		if err != nil {
-			return err
+			fmt.Printf("error:create table %v error=%v", module.TableName, err)
+			continue
+		}
+		if primaryKeyFields == nil || len(primaryKeyFields) == 0 {
+			fmt.Printf("error:table %v no primary key", module.TableName)
+			continue
 		}
 		tableName := module.TableName
 		module.CreateTime = time.Now().Format("2006-01:02 15:04:05.006")
@@ -458,6 +463,7 @@ func getModelTemplate() string {
 		"bytes"
 		"database/sql"
 		"errors"
+		"fmt"
 	)
 	
 	const (
@@ -472,28 +478,32 @@ func getModelTemplate() string {
 		{{end}}
 	}
 	
-	
+	func (m *{{.TableNameUpperCamel}}Model) format(format string, includeEmpty bool) (string, []interface{}) {
+		params := make([]interface{}, 0)
+		var sql bytes.Buffer
+
+		{{$n := -1}}
+        {{range $i,$field := .Fields}}
+            if m.{{$field.FieldName}}.Valid {
+                sql.WriteString({{if ne $i  0}}","+{{end}}fmt.Sprintf(format,"{{$field.ColumnName}}"))
+                params = append(params, m.{{$field.FieldName}}.{{.FieldNullTypeValue}})
+            } else if includeEmpty {
+                sql.WriteString({{if ne $i  0}}","+{{end}}fmt.Sprintf(format,"{{$field.ColumnName}}"))
+                params = append(params, {{if .ColumnDefault.Valid}}"{{.ColumnDefault.String}}"{{else}}nil{{end}})
+            }
+        {{end}}
+		return sql.String(), params
+	}
 	func (m *{{.TableNameUpperCamel}}Model) UpdateSql() (string, []interface{}, error) {
 		{{range $field := .Fields}}
 			{{if eq .IsPrimaryKey 1}}
 			if !m.{{ .FieldName }}.Valid {
 				return "", nil, errors.New("{{ .FieldName }} is not null")
 		}{{end}}{{end}}
-	
-		params := make([]interface{}, 0, {{len .Fields}})
+
+		str, params := m.format("` + " `%v`" + ` = ?", true)
 		var sql bytes.Buffer
-		sql.WriteString("update ` + "`{{.TableName}}`" + ` " ){{$n := 0}}
-		sql.WriteString("set {{range $i,$field := .Fields}}{{if ne $field.IsPrimaryKey 1}}{{if ne $n  0}},{{end}}{{$n = $i}}` + "`{{$field.ColumnName}}`" + ` = ?{{end}}{{end}} "){{$n = -1}}
-	
-		{{range $field := .Fields}}{{if ne $field.IsPrimaryKey 1}}
-		{{.ColumnNameLowerCamel}}V, err := m.{{ .FieldName }}.Value()
-		if {{.ColumnNameLowerCamel}}V ==nil || err != nil {
-			params = append(params, {{if .ColumnDefault.Valid}}"{{.ColumnDefault.String}}"{{else}}nil{{end}})
-		} else {
-			params = append(params, {{.ColumnNameLowerCamel}}V)
-		}
-		{{end}}{{end}}	{{$n = -1}}
-	
+		sql.WriteString(fmt.Sprintf("update ` + "`{{.TableName}}`" + ` set %v", str))
 	
 		sql.WriteString(" where  {{range $i,$field := .Fields}}{{if eq $field.IsPrimaryKey 1}}{{if ne $n  -1}} and {{end}}{{$n = $i}}` + "`{{$field.ColumnName}}`" + ` = ?{{end}}{{end}} "){{$n = -1}}
 		params = append(params {{range $i,$field := .Fields}}{{if eq $field.IsPrimaryKey 1}},m.{{$field.FieldName}}.{{.FieldNullTypeValue}}{{end}}{{end}})
@@ -506,24 +516,9 @@ func getModelTemplate() string {
 		}{{end}}
 		{{end}}
 	
-		params := make([]interface{}, 0, {{len .Fields}})
+		str, params := m.format("` + " `%v`" + ` = ?", false)
 		var sql bytes.Buffer
-		sql.WriteString("update ` + "`{{.TableName}}`" + ` " )
-	
-		sql.WriteString(" set "){{$n := -1}}
-		{{range $i,$field := .Fields}}
-			{{if eq .IsPrimaryKey 1}}
-				if m.{{$field.FieldName}}.Valid {
-					sql.WriteString("{{if ne $n  -1}},{{end}} ` + "`{{$field.ColumnName}}`" + ` = ? "){{$n = $i}}
-					params = append(params, m.{{$field.FieldName}}.{{.FieldNullTypeValue}})
-				}
-			{{else}}
-				if m.{{$field.FieldName}}.Valid {
-					sql.WriteString(", ` + "`{{$field.ColumnName}}`" + ` = ? "){{$n = $i}}
-					params = append(params, m.{{$field.FieldName}}.{{.FieldNullTypeValue}})
-				}
-			{{end}}
-		{{end}}
+		sql.WriteString(fmt.Sprintf("update ` + "`{{.TableName}}`" + ` set %v", str))
 		
 		{{$n = -1}}
 		sql.WriteString(" where  {{range $i,$field := .PrimaryKeyFields}}{{if ne $n  -1}} and {{end}}{{$n = $i}}` + "`{{$field.ColumnName}}`" + ` = ?{{end}} ")
@@ -535,20 +530,18 @@ func getModelTemplate() string {
 	
 	
 	func (m *{{.TableNameUpperCamel}}Model) InsertSql() (string, []interface{}, error) {
-		params := make([]interface{}, 0, {{len .Fields}})
+		str, params := m.format("` + " `%v`" + `", false)
 		var sql bytes.Buffer
-		sql.WriteString("insert into ` + "`{{.TableName}}`" + ` ")
-		sql.WriteString(" ({{range $i,$field := .Fields}} {{if ne $i 0}},{{end}}` + "`{{$field.ColumnName}}`" + `{{end}})")
-		sql.WriteString("values ({{range $i,$field := .Fields}} {{if ne $i 0}},{{end}}?{{end}})")
+		sql.WriteString(fmt.Sprintf("insert into ` + "`{{.TableName}}`" + ` (%v) values (", str))
 		
-		{{range $field := .Fields}}
-		{{.ColumnNameLowerCamel}}V, err := m.{{ .FieldName }}.Value()
-		if {{.ColumnNameLowerCamel}}V ==nil || err != nil {
-			params = append(params, {{if .ColumnDefault.Valid}}"{{.ColumnDefault.String}}"{{else}}nil{{end}})
-		} else {
-			params = append(params, {{.ColumnNameLowerCamel}}V)
+		for i := 0; i < len(params); i++ {
+			if i == 0 {
+				sql.WriteString(" ? ")
+			} else {
+				sql.WriteString(",? ")
+			}
 		}
-		{{end}}	
+		sql.WriteString(")")
 		
 		return sql.String(), params, nil
 	}`
@@ -752,6 +745,14 @@ func getDaoTemplate() string {
 					return 0,err
 				}
 				return UpdateBySql(sqlStr, param)
+			}
+			func UpdateByGen(gen *generator.Generator) (int64, error) {
+				sqlStr, params, err := gen.UpdateSql(true)
+				if err != nil {
+					err = errors.WithStack(err)
+					return 0, err
+				}
+				return UpdateBySql(sqlStr, params)
 			}
 			func UpdateBySql(sqlStr string, params []interface{}) (int64, error) {
 				count, err := dbutil.PrepareUpdate(sqlStr, params,&sql.DB{})
