@@ -739,6 +739,34 @@ func getDaoTemplate() string {
 				return id, nil
 			}
 
+			//batch insert
+			func Inserts(maps []map[string]interface{}) (int64, error) {
+				gen := generator.NewGenerator().Table(model.TABLE_NAME).Inserts(maps)
+				sqlStr, params, err := gen.BatchUpdateSql(true)
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				return InsertsBySql(sqlStr, params)
+			}
+
+			//batch insert
+			func InsertsByGen(gen *generator.Generator) (int64, error) {
+				sqlStr, params, err := gen.BatchUpdateSql(true)
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				return InsertsBySql(sqlStr, params)
+			}
+
+			//batch insert
+			func InsertsBySql(sqlStr string, params []interface{}) (int64, error) {
+				id, err := dbutil.PrepareInsert(sqlStr, params, &sql.DB{})
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				return id, nil
+			}
+
 			func Update({{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model) (int64, error) {
 				sqlStr, param, err := {{.TableNameLowerCamel}}.UpdateSql()
 				if err != nil {
