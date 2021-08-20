@@ -770,6 +770,25 @@ func getDaoTemplate() string {
 				}
 				return count, nil
 			}
+
+			func Save({{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model) (int64, error) {
+				sqlStr, params, err := {{.TableNameLowerCamel}}.SaveSql()
+				if err != nil {
+					err = errors.WithStack(err)
+					return 0, err
+				}
+				return SaveBySql(sqlStr, params)
+			}
+			
+			func SaveBySql(sqlStr string, params []interface{}) (int64, error) {
+				id, err := dbutil.PrepareSave(sqlStr, params, &sql.DB{})
+				if err != nil {
+					err = errors.WithStack(err)
+					return 0, err
+				}
+				return id, nil
+			}
+
 			func DeleteByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} interface{}  {{end}}) (int64, error) {
 				{{ if eq (len .PrimaryKeyFields) 1 -}} 
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}}))
