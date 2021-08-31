@@ -136,8 +136,8 @@ func PrepareSave(sql string, params []interface{}, db *sql.DB) (int64, error) {
 	}
 	serverMode := os.Getenv("server.mode")
 	if serverMode == "dev" {
-		fmt.Printf("sql is %v", sql)
-		fmt.Printf("params is %v", params)
+		fmt.Printf("sql is %v \n", sql)
+		fmt.Printf("params is %v \n", params)
 	}
 	ret, err := db.Exec(sql, params...)
 	if err != nil {
