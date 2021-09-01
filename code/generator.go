@@ -548,9 +548,9 @@ func getModelTemplate() string {
 	func (m *{{.TableNameUpperCamel}}Model) SaveSql() (string, []interface{}, error) {
 		insertStr, params, _ := m.InsertSql()
 		var sql bytes.Buffer
-		updateStr, params := m.format("` + " `%v`" + `", true)
+		updateStr, updateParams := m.format(" ` + " `%v`" + ` = ?", true)
 		sql.WriteString(fmt.Sprintf("%v on duplicate key update %v", insertStr, updateStr))
-	
+		params = append(params, updateParams...)
 		return sql.String(), params, nil
 	}`
 }
