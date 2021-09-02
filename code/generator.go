@@ -799,7 +799,7 @@ func getDaoTemplate() string {
 				return count, nil
 			}
 			//batch update
-			func Updates(maps []map[string]interface{}) (int64, error) {
+			func Updates(maps map[interface{}]map[string]interface{}) (int64, error) {
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Updates(maps)
 				sqlStr, params, err := gen.UpdatesSql(true)
 				if err != nil {
