@@ -21,6 +21,7 @@ type Generator struct {
 	querys    []Query
 	update    map[string]interface{}
 	updates   map[interface{}]map[string]interface{}
+	insert    map[string]interface{}
 	inserts   []map[string]interface{}
 	joins     []*Join
 	tableName string
@@ -46,6 +47,10 @@ func (s *Generator) Update(m map[string]interface{}) *Generator {
 }
 func (s *Generator) Updates(m map[interface{}]map[string]interface{}) *Generator {
 	s.updates = m
+	return s
+}
+func (s *Generator) Insert(m map[string]interface{}) *Generator {
+	s.insert = m
 	return s
 }
 func (s *Generator) Inserts(m []map[string]interface{}) *Generator {
@@ -225,6 +230,103 @@ func (s *Generator) DeleteSql(prepare bool) (string, []interface{}, error) {
 
 	return sql.String(), params, nil
 }
+func (s *Generator) InsertSql(prepare bool) (string, []interface{}, error) {
+
+	if s.tableName == "" {
+		return "", nil, errors.New("tableName is not null")
+	}
+	if s.insert == nil || len(s.insert) == 0 {
+		return "", nil, errors.New("The insert is not null")
+	}
+	//把所有要修改的字段提取出来
+	fields := make([]string, 0)
+	for field, _ := range s.insert {
+		fields = append(fields, field)
+	}
+
+	var sql bytes.Buffer
+	sql.WriteString("insert into `" + s.tableName + "` ")
+	sql.WriteString("(")
+	n := 0
+
+	for _, field := range fields {
+		if n != 0 {
+			sql.WriteString(",")
+		}
+		sql.WriteString(" " + field + " ")
+		n++
+	}
+	sql.WriteString(") values")
+	n = 0
+	params := make([]interface{}, 0)
+	sql.WriteString("(")
+	m := 0
+	for _, field := range fields {
+		if m != 0 {
+			sql.WriteString(",")
+		}
+		params = append(params, s.insert[field])
+		if prepare {
+			sql.WriteString(" ? ")
+		} else {
+			sql.WriteString(fmt.Sprintf(" '%v' ", s.insert[field]))
+		}
+		m++
+	}
+	sql.WriteString(")")
+	return sql.String(), params, nil
+}
+func (s *Generator) InsertsSql(prepare bool) (string, []interface{}, error) {
+
+	if s.tableName == "" {
+		return "", nil, errors.New("tableName is not null")
+	}
+	if s.inserts == nil || len(s.inserts) == 0 {
+		return "", nil, errors.New("The inserts is not null")
+	}
+	//把所有要修改的字段提取出来
+	fields := make([]string, 0)
+	for field, _ := range s.inserts[0] {
+		fields = append(fields, field)
+	}
+	var sql bytes.Buffer
+	sql.WriteString("insert into `" + s.tableName + "` ")
+	sql.WriteString("(")
+	n := 0
+
+	for _, field := range fields {
+		if n != 0 {
+			sql.WriteString(",")
+		}
+		sql.WriteString(" " + field + " ")
+		n++
+	}
+	sql.WriteString(") values")
+	n = 0
+	params := make([]interface{}, 0)
+	for _, maps := range s.inserts {
+		if n != 0 {
+			sql.WriteString(",")
+		}
+		sql.WriteString("(")
+		m := 0
+		for _, field := range fields {
+			if m != 0 {
+				sql.WriteString(",")
+			}
+			params = append(params, maps[field])
+			if prepare {
+				sql.WriteString(" ? ")
+			} else {
+				sql.WriteString(fmt.Sprintf(" '%v' ", maps[field]))
+			}
+			m++
+		}
+		sql.WriteString(")")
+		n++
+	}
+	return sql.String(), params, nil
+}
 
 func (s *Generator) UpdateSql(prepare bool) (string, []interface{}, error) {
 	if s.tableName == "" {
@@ -265,63 +367,7 @@ func (s *Generator) UpdateSql(prepare bool) (string, []interface{}, error) {
 	return sql.String(), params, nil
 }
 
-func (s *Generator) BatchInsertSql(prepare bool) (string, []interface{}, error) {
-
-	if s.tableName == "" {
-		return "", nil, errors.New("tableName is not null")
-	}
-	if s.inserts == nil || len(s.inserts) == 0 {
-		return "", nil, errors.New("The values is not null")
-	}
-	//把所有要修改的字段提取出来
-	fieldMap := make(map[string]string)
-	for field, _ := range s.inserts[0] {
-		fieldMap[field] = ""
-	}
-	fields := make([]string, 0, len(fieldMap))
-	for k := range fieldMap {
-		fields = append(fields, k)
-	}
-
-	var sql bytes.Buffer
-	sql.WriteString("insert into `" + s.tableName + "` ")
-	sql.WriteString("(")
-	n := 0
-
-	for _, field := range fields {
-		if n != 0 {
-			sql.WriteString(",")
-		}
-		sql.WriteString(" " + field + " ")
-		n++
-	}
-	sql.WriteString(") values")
-	n = 0
-	params := make([]interface{}, 0)
-	for _, maps := range s.inserts {
-		if n != 0 {
-			sql.WriteString(",")
-		}
-		sql.WriteString("(")
-		m := 0
-		for _, field := range fields {
-			if m != 0 {
-				sql.WriteString(",")
-			}
-			params = append(params, maps[field])
-			if prepare {
-				sql.WriteString(" ? ")
-			} else {
-				sql.WriteString(fmt.Sprintf(" '%v' ", maps[field]))
-			}
-			m++
-		}
-		sql.WriteString(")")
-		n++
-	}
-	return sql.String(), params, nil
-}
-func (s *Generator) BatchUpdateSql(prepare bool) (string, []interface{}, error) {
+func (s *Generator) UpdatesSql(prepare bool) (string, []interface{}, error) {
 
 	if s.tableName == "" {
 		return "", nil, errors.New("tableName is not null")

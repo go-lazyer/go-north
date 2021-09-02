@@ -172,7 +172,7 @@ query := NewInQuery("dwid", dwids)
 
 gen := NewGenerator().Table("user").Where(query).Primary("dwid").Updates(set)
 
-fmt.Print(gen.BatchUpdateSql(false))
+fmt.Print(gen.UpdatesSql(false))
 ```
 
 8. 批量插入
@@ -205,7 +205,7 @@ dwids := []map[string]interface{}{
 
 gen := NewGenerator().Table("user").Inserts(dwids)
 
-fmt.Print(gen.BatchInsertSql(false))
+fmt.Print(gen.InsertsSql(false))
 ```
 
 ### 四、code-gengrator

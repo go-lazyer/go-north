@@ -722,7 +722,7 @@ func getDaoTemplate() string {
 			}
 			
 			func InsertByGen(gen *generator.Generator) (int64, error) {
-				sqlStr, params, err := gen.SelectSql(true)
+				sqlStr, params, err := gen.InsertSql(true)
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0, err
@@ -742,7 +742,7 @@ func getDaoTemplate() string {
 			//batch insert
 			func Inserts(maps []map[string]interface{}) (int64, error) {
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Inserts(maps)
-				sqlStr, params, err := gen.BatchInsertSql(true)
+				sqlStr, params, err := gen.InsertsSql(true)
 				if err != nil {
 					return 0, errors.WithStack(err)
 				}
@@ -751,7 +751,7 @@ func getDaoTemplate() string {
 
 			//batch insert
 			func InsertsByGen(gen *generator.Generator) (int64, error) {
-				sqlStr, params, err := gen.BatchUpdateSql(true)
+				sqlStr, params, err := gen.InsertsSql(true)
 				if err != nil {
 					return 0, errors.WithStack(err)
 				}
@@ -798,7 +798,33 @@ func getDaoTemplate() string {
 				}
 				return count, nil
 			}
+			//batch update
+			func Updates(maps []map[string]interface{}) (int64, error) {
+				gen := generator.NewGenerator().Table(model.TABLE_NAME).Updates(maps)
+				sqlStr, params, err := gen.UpdatesSql(true)
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				return UpdatesBySql(sqlStr, params)
+			}
 
+			//batch update
+			func UpdatesByGen(gen *generator.Generator) (int64, error) {
+				sqlStr, params, err := gen.UpdatesSql(true)
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				return UpdatesBySql(sqlStr, params)
+			}
+
+			//batch update
+			func UpdatesBySql(sqlStr string, params []interface{}) (int64, error) {
+				id, err := dbutil.PrepareUpdate(sqlStr, params, &sql.DB{})
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				return id, nil
+			}
 			func Save({{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model) (int64, error) {
 				sqlStr, params, err := {{.TableNameLowerCamel}}.SaveSql()
 				if err != nil {

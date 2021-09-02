@@ -56,7 +56,7 @@ func TestGenerator_UpdateSql(t *testing.T) {
 	fmt.Println(gen.UpdateSql(false))
 }
 
-func TestGenerator_BatchUpdateSql(t *testing.T) {
+func TestGenerator_UpdatesSql(t *testing.T) {
 	// update
 	// `user`
 	// set
@@ -103,22 +103,22 @@ func TestGenerator_BatchUpdateSql(t *testing.T) {
 	}
 	query := NewInQuery("dwid", dwids)
 	gen := NewGenerator().Table("user").Where(query).Primary("dwid").Updates(set)
-	fmt.Print(gen.BatchUpdateSql(false))
+	fmt.Print(gen.UpdatesSql(false))
 }
 
-func TestGenerator_BatchInsertSql(t *testing.T) {
+func TestGenerator_InsertsSql(t *testing.T) {
 	//insert into `user` ( age , name , sex ) values( '10' , 'lilie' , 'boy' ),
 	//( '20' , 'lining' , 'boy' ),
 	//( '30' , 'hanmeimei' , 'girl' )
 	f1 := map[string]interface{}{
-		"name": "lilie",
 		"sex":  "boy",
+		"name": "lilie",
 		"age":  "10",
 	}
 	f2 := map[string]interface{}{
 		"name": "lining",
-		"sex":  "boy",
 		"age":  "20",
+		"sex":  "boy",
 	}
 	f3 := map[string]interface{}{
 		"name": "hanmeimei",
@@ -129,5 +129,15 @@ func TestGenerator_BatchInsertSql(t *testing.T) {
 		f1, f2, f3,
 	}
 	gen := NewGenerator().Table("user").Inserts(dwids)
-	fmt.Print(gen.BatchInsertSql(false))
+	fmt.Print(gen.InsertsSql(false))
+}
+
+func TestGenerator_InsertSql(t *testing.T) {
+	f3 := map[string]interface{}{
+		"name": "hanmeimei",
+		"sex":  "girl",
+		"age":  "30",
+	}
+	gen := NewGenerator().Table("user").Insert(f3)
+	fmt.Print(gen.InsertSql(false))
 }
