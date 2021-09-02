@@ -12,8 +12,8 @@ import (
 func PrepareCount(sql string, params []interface{}, db *sql.DB) (int64, error) {
 	serverMode := os.Getenv("server.mode")
 	if serverMode == "dev" {
-		fmt.Printf("sql is %v", sql)
-		fmt.Printf("params is %v", params)
+		fmt.Printf("sql is %v\n", sql)
+		fmt.Printf("params is %v\n", params)
 	}
 
 	stmt, err := db.Prepare(sql)
@@ -39,8 +39,8 @@ func PrepareCount(sql string, params []interface{}, db *sql.DB) (int64, error) {
 func PrepareFirst(sql string, params []interface{}, structs interface{}, db *sql.DB) error {
 	serverMode := os.Getenv("server.mode")
 	if serverMode == "dev" {
-		fmt.Printf("sql is %v", sql)
-		fmt.Printf("params is %v", params)
+		fmt.Printf("sql is %v\n", sql)
+		fmt.Printf("params is %v\n", params)
 	}
 	stmt, err := db.Prepare(sql)
 	if err != nil {
@@ -65,8 +65,8 @@ func PrepareQuery(sql string, params []interface{}, results interface{}, db *sql
 	}
 	serverMode := os.Getenv("server.mode")
 	if serverMode == "dev" {
-		fmt.Printf("sql is %v", sql)
-		fmt.Printf("params is %v", params)
+		fmt.Printf("sql is %v\n", sql)
+		fmt.Printf("params is %v\n", params)
 	}
 	stmt, err := db.Prepare(sql)
 	if err != nil {
@@ -92,8 +92,8 @@ func PrepareInsert(sql string, params []interface{}, db *sql.DB) (int64, error) 
 	}
 	serverMode := os.Getenv("server.mode")
 	if serverMode == "dev" {
-		fmt.Printf("sql is %v", sql)
-		fmt.Printf("params is %v", params)
+		fmt.Printf("sql is %v\n", sql)
+		fmt.Printf("params is %v\n", params)
 	}
 	stmt, err := db.Prepare(sql)
 	if err != nil {
@@ -117,8 +117,8 @@ func PrepareUpdate(sql string, params []interface{}, db *sql.DB) (int64, error) 
 	}
 	serverMode := os.Getenv("server.mode")
 	if serverMode == "dev" {
-		fmt.Printf("sql is %v", sql)
-		fmt.Printf("params is %v", params)
+		fmt.Printf("sql is %v\n", sql)
+		fmt.Printf("params is %v\n", params)
 	}
 	ret, err := db.Exec(sql, params...)
 	if err != nil {
@@ -136,8 +136,8 @@ func PrepareSave(sql string, params []interface{}, db *sql.DB) (int64, error) {
 	}
 	serverMode := os.Getenv("server.mode")
 	if serverMode == "dev" {
-		fmt.Printf("sql is %v \n", sql)
-		fmt.Printf("params is %v \n", params)
+		fmt.Printf("sql is %v\n", sql)
+		fmt.Printf("params is %v\n", params)
 	}
 	ret, err := db.Exec(sql, params...)
 	if err != nil {
@@ -155,8 +155,8 @@ func PrepareDelete(sql string, params []interface{}, db *sql.DB) (int64, error) 
 	}
 	serverMode := os.Getenv("server.mode")
 	if serverMode == "dev" {
-		fmt.Printf("sql is %v", sql)
-		fmt.Printf("params is %v", params)
+		fmt.Printf("sql is %v\n", sql)
+		fmt.Printf("params is %v\n", params)
 	}
 	ret, err := db.Exec(sql, params...)
 	if err != nil {
