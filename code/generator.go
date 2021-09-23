@@ -433,7 +433,7 @@ func getServiceTemplate() string {
 			func QueryByParam({{.TableNameLowerCamel}}Param *param.{{.TableNameUpperCamel}}Param) ([]model.{{.TableNameUpperCamel}}Model, error) {
 				query := generator.NewBoolQuery()
 				gen := generator.NewGenerator().PageNum({{.TableNameLowerCamel}}Param.PageNum).PageStart({{.TableNameLowerCamel}}Param.PageStart).PageSize({{.TableNameLowerCamel}}Param.PageSize).Table(model.TABLE_NAME).Where(query)
-				{{.TableNameLowerCamel}}s, err := dao.QueryByGsql(gen)
+				{{.TableNameLowerCamel}}s, err := dao.QueryByGen(gen)
 				if err != nil {
 					return nil,err
 				}
