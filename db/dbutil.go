@@ -10,8 +10,8 @@ import (
 )
 
 func PrepareCount(sql string, params []interface{}, db *sql.DB) (int64, error) {
-	serverMode := os.Getenv("server.mode")
-	if serverMode == "dev" {
+	serverMode := os.Getenv("sql.log")
+	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
@@ -37,8 +37,8 @@ func PrepareCount(sql string, params []interface{}, db *sql.DB) (int64, error) {
 	return count, nil
 }
 func PrepareFirst(sql string, params []interface{}, structs interface{}, db *sql.DB) error {
-	serverMode := os.Getenv("server.mode")
-	if serverMode == "dev" {
+	serverMode := os.Getenv("sql.log")
+	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
@@ -63,8 +63,8 @@ func PrepareQuery(sql string, params []interface{}, results interface{}, db *sql
 	if db == nil {
 		return errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
-	serverMode := os.Getenv("server.mode")
-	if serverMode == "dev" {
+	serverMode := os.Getenv("sql.log")
+	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
@@ -90,8 +90,8 @@ func PrepareInsert(sql string, params []interface{}, db *sql.DB) (int64, error) 
 	if db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
-	serverMode := os.Getenv("server.mode")
-	if serverMode == "dev" {
+	serverMode := os.Getenv("sql.log")
+	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
@@ -115,8 +115,8 @@ func PrepareUpdate(sql string, params []interface{}, db *sql.DB) (int64, error) 
 	if db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
-	serverMode := os.Getenv("server.mode")
-	if serverMode == "dev" {
+	serverMode := os.Getenv("sql.log")
+	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
@@ -134,8 +134,8 @@ func PrepareSave(sql string, params []interface{}, db *sql.DB) (int64, error) {
 	if db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
-	serverMode := os.Getenv("server.mode")
-	if serverMode == "dev" {
+	serverMode := os.Getenv("sql.log")
+	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
@@ -153,8 +153,8 @@ func PrepareDelete(sql string, params []interface{}, db *sql.DB) (int64, error) 
 	if db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
-	serverMode := os.Getenv("server.mode")
-	if serverMode == "dev" {
+	serverMode := os.Getenv("sql.log")
+	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
