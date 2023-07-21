@@ -48,7 +48,7 @@ func TestGenerator_SelectSql(t *testing.T) {
 func TestGenerator_UpdateSql(t *testing.T) {
 	// update user set age=21,name="lazeyr" where id="10000"
 	query := NewEqualQuery("id", 1000)
-	set := map[string]interface{}{
+	set := map[string]any{
 		"age":  21,
 		"name": "lazyer",
 	}
@@ -78,27 +78,27 @@ func TestGenerator_UpdatesSql(t *testing.T) {
 	// where
 	// 	user.dwid in('10001', '10002', '10003')
 
-	f1 := map[string]interface{}{
+	f1 := map[string]any{
 		"name": "lilie",
 		"sex":  "boy",
 		"age":  "10",
 	}
-	f2 := map[string]interface{}{
+	f2 := map[string]any{
 		"name": "lining",
 		"sex":  "boy",
 		"age":  "20",
 	}
-	f3 := map[string]interface{}{
+	f3 := map[string]any{
 		"name": "hanmeimei",
 		"sex":  "girl",
 		"age":  "30",
 	}
-	set := map[interface{}]map[string]interface{}{
+	set := map[any]map[string]any{
 		"10001": f1,
 		"10002": f2,
 		"10003": f3,
 	}
-	dwids := []interface{}{
+	dwids := []any{
 		10001, 10002, 10003,
 	}
 	query := NewInQuery("dwid", dwids)
@@ -110,22 +110,22 @@ func TestGenerator_InsertsSql(t *testing.T) {
 	//insert into `user` ( age , name , sex ) values( '10' , 'lilie' , 'boy' ),
 	//( '20' , 'lining' , 'boy' ),
 	//( '30' , 'hanmeimei' , 'girl' )
-	f1 := map[string]interface{}{
+	f1 := map[string]any{
 		"sex":  "boy",
 		"name": "lilie",
 		"age":  "10",
 	}
-	f2 := map[string]interface{}{
+	f2 := map[string]any{
 		"name": "lining",
 		"age":  "20",
 		"sex":  "boy",
 	}
-	f3 := map[string]interface{}{
+	f3 := map[string]any{
 		"name": "hanmeimei",
 		"sex":  "girl",
 		"age":  "30",
 	}
-	dwids := []map[string]interface{}{
+	dwids := []map[string]any{
 		f1, f2, f3,
 	}
 	gen := NewGenerator().Table("user").Inserts(dwids)
@@ -133,7 +133,7 @@ func TestGenerator_InsertsSql(t *testing.T) {
 }
 
 func TestGenerator_InsertSql(t *testing.T) {
-	f3 := map[string]interface{}{
+	f3 := map[string]any{
 		"name": "hanmeimei",
 		"sex":  "girl",
 		"age":  "30",

@@ -110,7 +110,7 @@ fmt.Println(gen.SelectSql(false))
 
 query := NewEqualQuery("id", 1000)
 
-set := map[string]interface{}{
+set := map[string]any{
   "age":  21,
   "name": "lazyer",
 }
@@ -143,28 +143,28 @@ fmt.Println(gen.UpdateSql(false))
 // where
 // 	user.dwid in('10001', '10002', '10003')
 
-f1 := map[string]interface{}{
+f1 := map[string]any{
   "name": "lilie",
   "sex":  "boy",
   "age":  "10",
 }
-f2 := map[string]interface{}{
+f2 := map[string]any{
   "name": "lining",
   "sex":  "boy",
   "age":  "20",
 }
-f3 := map[string]interface{}{
+f3 := map[string]any{
   "name": "hanmeimei",
   "sex":  "girl",
   "age":  "30",
 }
-set := map[interface{}]map[string]interface{}{
+set := map[any]map[string]any{
   "10001": f1,
   "10002": f2,
   "10003": f3,
 }
 
-dwids := []interface{}{
+dwids := []any{
   10001, 10002, 10003,
 }
 
@@ -183,23 +183,23 @@ fmt.Print(gen.UpdatesSql(false))
 //( '10' , 'lilie' , 'boy' ),
 //( '20' , 'lining' , 'boy' ),
 //( '30' , 'hanmeimei' , 'girl' )
-f1 := map[string]interface{}{
+f1 := map[string]any{
   "name": "lilie",
   "sex":  "boy",
   "age":  "10",
 }
-f2 := map[string]interface{}{
+f2 := map[string]any{
   "name": "lining",
   "sex":  "boy",
   "age":  "20",
 }
-f3 := map[string]interface{}{
+f3 := map[string]any{
   "name": "hanmeimei",
   "sex":  "girl",
   "age":  "30",
 }
 
-dwids := []map[string]interface{}{
+dwids := []map[string]any{
   f1, f2, f3,
 }
 

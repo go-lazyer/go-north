@@ -421,7 +421,7 @@ func getServiceTemplate() string {
 			)
 
 
-			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} interface{}  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
+			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
 				{{.TableNameLowerCamel}}, err := dao.QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }}   {{end}})
 				if err != nil {
 					return nil,err
@@ -478,8 +478,8 @@ func getModelTemplate() string {
 		{{end}}
 	}
 	
-	func (m *{{.TableNameUpperCamel}}Model) format(format string, includeEmpty bool) (string, []interface{}) {
-		params := make([]interface{}, 0)
+	func (m *{{.TableNameUpperCamel}}Model) format(format string, includeEmpty bool) (string, []any) {
+		params := make([]any, 0)
 		var sql bytes.Buffer
 
 		{{$n := -1}}
@@ -494,7 +494,7 @@ func getModelTemplate() string {
         {{end}}
 		return sql.String(), params
 	}
-	func (m *{{.TableNameUpperCamel}}Model) UpdateSql() (string, []interface{}, error) {
+	func (m *{{.TableNameUpperCamel}}Model) UpdateSql() (string, []any, error) {
 		{{range $field := .Fields}}
 			{{if eq .IsPrimaryKey 1}}
 			if !m.{{ .FieldName }}.Valid {
@@ -510,7 +510,7 @@ func getModelTemplate() string {
 		return sql.String(), params, nil
 	}
 	
-	func (m *{{.TableNameUpperCamel}}Model) UpdateSqlBySelective() (string, []interface{}, error) {
+	func (m *{{.TableNameUpperCamel}}Model) UpdateSqlBySelective() (string, []any, error) {
 		{{range $field := .Fields}}{{if eq .IsPrimaryKey 1}} if !m.{{ .FieldName }}.Valid {
 			return "", nil, errors.New("{{ .FieldName }} is not null")
 		}{{end}}
@@ -528,7 +528,7 @@ func getModelTemplate() string {
 		return sql.String(), params, nil
 	}
 	
-	func (m *{{.TableNameUpperCamel}}Model) InsertSql() (string, []interface{}, error) {
+	func (m *{{.TableNameUpperCamel}}Model) InsertSql() (string, []any, error) {
 		str, params := m.format("` + " `%v`" + `", true)
 		var sql bytes.Buffer
 		sql.WriteString(fmt.Sprintf("insert into ` + "`{{.TableName}}`" + ` (%v) values (", str))
@@ -545,7 +545,7 @@ func getModelTemplate() string {
 		return sql.String(), params, nil
 	}
 
-	func (m *{{.TableNameUpperCamel}}Model) SaveSql() (string, []interface{}, error) {
+	func (m *{{.TableNameUpperCamel}}Model) SaveSql() (string, []any, error) {
 		insertStr, params, _ := m.InsertSql()
 		var sql bytes.Buffer
 		updateStr, updateParams := m.format(" ` + " `%v`" + ` = ?", true)
@@ -574,7 +574,7 @@ func getDaoTemplate() string {
 				"github.com/pkg/errors"
 			)
 			// query first by primaryKey
-			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} interface{}  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
+			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
 				{{ if eq (len .PrimaryKeyFields) 1 -}} 
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}}))
 				{{ else -}}
@@ -598,7 +598,7 @@ func getDaoTemplate() string {
 				return QueryFirstBySql(sqlStr, params)
 			}
 			// query first by sql
-			func QueryFirstBySql(sqlStr string, params []interface{}) (*model.{{.TableNameUpperCamel}}Model, error) {
+			func QueryFirstBySql(sqlStr string, params []any) (*model.{{.TableNameUpperCamel}}Model, error) {
 				var {{.TableNameLowerCamel}} model.{{.TableNameUpperCamel}}Model
 				err := dbutil.PrepareFirst(sqlStr, params, &{{.TableNameLowerCamel}},&sql.DB{})
 				if err != nil {
@@ -612,7 +612,7 @@ func getDaoTemplate() string {
 			}
 			{{if eq (len .PrimaryKeyFields) 1}} 
 			// query map by primaryKeys
-			func QueryMapByPrimaryKeys(primaryKeys []interface{}) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
+			func QueryMapByPrimaryKeys(primaryKeys []any) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, primaryKeys))
 				sqlStr, params, err := gen.SelectSql(true)
 				if err != nil {
@@ -634,7 +634,7 @@ func getDaoTemplate() string {
 			}
 			
 			// query map by sql
-			func QueryMapBySql(sqlStr string, params []interface{}) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
+			func QueryMapBySql(sqlStr string, params []any) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
 				{{.TableNameLowerCamel}}s := make([]model.{{.TableNameUpperCamel}}Model, 0)
 				err := dbutil.PrepareQuery(sqlStr, params, &{{.TableNameLowerCamel}}s,&sql.DB{})
 				if err != nil {
@@ -662,7 +662,7 @@ func getDaoTemplate() string {
 				
 			}
 			// count by gen
-			func CountBySql(sqlStr string, params []interface{}) (int64, error) {
+			func CountBySql(sqlStr string, params []any) (int64, error) {
 				count, err := dbutil.PrepareCount(sqlStr, params,&sql.DB{})
 				if err != nil {
 					err = errors.WithStack(err)
@@ -681,7 +681,7 @@ func getDaoTemplate() string {
 				return QueryBySql(sqlStr, params)
 			}
 			// query by sql
-			func QueryBySql(sqlStr string, params []interface{}) ([]model.{{.TableNameUpperCamel}}Model, error) {
+			func QueryBySql(sqlStr string, params []any) ([]model.{{.TableNameUpperCamel}}Model, error) {
 				{{.TableNameLowerCamel}}s := make([]model.{{.TableNameUpperCamel}}Model, 0)
 				err := dbutil.PrepareQuery(sqlStr, params, &{{.TableNameLowerCamel}}s,&sql.DB{})
 				if err != nil {
@@ -702,7 +702,7 @@ func getDaoTemplate() string {
 				return QueryExtendBySql(sqlStr, params)
 			}
 			// query extend by sql
-			func QueryExtendBySql(sqlStr string, params []interface{}) ([]model.{{.TableNameUpperCamel}}Extend, error) {
+			func QueryExtendBySql(sqlStr string, params []any) ([]model.{{.TableNameUpperCamel}}Extend, error) {
 				{{.TableNameLowerCamel}}Extends := make([]model.{{.TableNameUpperCamel}}Extend, 0)
 				err := dbutil.PrepareQuery(sqlStr, params, &{{.TableNameLowerCamel}}Extends,&sql.DB{})
 				if err != nil {
@@ -730,7 +730,7 @@ func getDaoTemplate() string {
 				return InsertBySql(sqlStr, params)
 			}
 			
-			func InsertBySql(sqlStr string, params []interface{}) (int64, error) {
+			func InsertBySql(sqlStr string, params []any) (int64, error) {
 				id, err := dbutil.PrepareInsert(sqlStr, params, &sql.DB{})
 				if err != nil {
 					err = errors.WithStack(err)
@@ -740,7 +740,7 @@ func getDaoTemplate() string {
 			}
 
 			//batch insert
-			func Inserts(maps []map[string]interface{}) (int64, error) {
+			func Inserts(maps []map[string]any) (int64, error) {
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Inserts(maps)
 				sqlStr, params, err := gen.InsertsSql(true)
 				if err != nil {
@@ -759,7 +759,7 @@ func getDaoTemplate() string {
 			}
 
 			//batch insert
-			func InsertsBySql(sqlStr string, params []interface{}) (int64, error) {
+			func InsertsBySql(sqlStr string, params []any) (int64, error) {
 				id, err := dbutil.PrepareInsert(sqlStr, params, &sql.DB{})
 				if err != nil {
 					return 0, errors.WithStack(err)
@@ -790,7 +790,7 @@ func getDaoTemplate() string {
 				}
 				return UpdateBySql(sqlStr, params)
 			}
-			func UpdateBySql(sqlStr string, params []interface{}) (int64, error) {
+			func UpdateBySql(sqlStr string, params []any) (int64, error) {
 				count, err := dbutil.PrepareUpdate(sqlStr, params,&sql.DB{})
 				if err != nil {
 					err = errors.WithStack(err)
@@ -799,7 +799,7 @@ func getDaoTemplate() string {
 				return count, nil
 			}
 			//batch update
-			func Updates(maps map[interface{}]map[string]interface{}) (int64, error) {
+			func Updates(maps map[any]map[string]any) (int64, error) {
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Updates(maps)
 				sqlStr, params, err := gen.UpdatesSql(true)
 				if err != nil {
@@ -818,7 +818,7 @@ func getDaoTemplate() string {
 			}
 
 			//batch update
-			func UpdatesBySql(sqlStr string, params []interface{}) (int64, error) {
+			func UpdatesBySql(sqlStr string, params []any) (int64, error) {
 				id, err := dbutil.PrepareUpdate(sqlStr, params, &sql.DB{})
 				if err != nil {
 					return 0, errors.WithStack(err)
@@ -834,7 +834,7 @@ func getDaoTemplate() string {
 				return SaveBySql(sqlStr, params)
 			}
 			
-			func SaveBySql(sqlStr string, params []interface{}) (int64, error) {
+			func SaveBySql(sqlStr string, params []any) (int64, error) {
 				id, err := dbutil.PrepareSave(sqlStr, params, &sql.DB{})
 				if err != nil {
 					err = errors.WithStack(err)
@@ -843,7 +843,7 @@ func getDaoTemplate() string {
 				return id, nil
 			}
 
-			func DeleteByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} interface{}  {{end}}) (int64, error) {
+			func DeleteByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (int64, error) {
 				{{ if eq (len .PrimaryKeyFields) 1 -}} 
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}}))
 				{{ else -}}
@@ -857,7 +857,7 @@ func getDaoTemplate() string {
 				}
 				return DeleteBySql(sqlStr, params)
 			}
-			func DeleteByPrimaryKeys(primaryKeys []interface{}) (int64, error) {
+			func DeleteByPrimaryKeys(primaryKeys []any) (int64, error) {
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, primaryKeys))
 				sqlStr, params, err := gen.DeleteSql(true)
 				if err != nil {
@@ -874,7 +874,7 @@ func getDaoTemplate() string {
 				}
 				return DeleteBySql(sqlStr, params)
 			}
-			func DeleteBySql(sqlStr string, params []interface{}) (int64, error) {
+			func DeleteBySql(sqlStr string, params []any) (int64, error) {
 				count, err := dbutil.PrepareDelete(sqlStr, params, &sql.DB{})
 				if err != nil {
 					err = errors.WithStack(err)

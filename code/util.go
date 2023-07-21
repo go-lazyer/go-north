@@ -64,7 +64,7 @@ func ToLowerCamelCase(str string) string {
 	}
 	return sb.String()
 }
-func IsNumberType(inter interface{}) bool {
+func IsNumberType(inter any) bool {
 	if inter == nil {
 		return false
 	}

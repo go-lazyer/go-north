@@ -19,10 +19,10 @@ type Generator struct {
 	pageSize  int
 	pageNum   int
 	querys    []Query
-	update    map[string]interface{}
-	updates   map[interface{}]map[string]interface{}
-	insert    map[string]interface{}
-	inserts   []map[string]interface{}
+	update    map[string]any
+	updates   map[any]map[string]any
+	insert    map[string]any
+	inserts   []map[string]any
 	joins     []*Join
 	tableName string
 	primary   string //主键
@@ -41,19 +41,19 @@ func (s *Generator) Where(query ...Query) *Generator {
 	return s
 }
 
-func (s *Generator) Update(m map[string]interface{}) *Generator {
+func (s *Generator) Update(m map[string]any) *Generator {
 	s.update = m
 	return s
 }
-func (s *Generator) Updates(m map[interface{}]map[string]interface{}) *Generator {
+func (s *Generator) Updates(m map[any]map[string]any) *Generator {
 	s.updates = m
 	return s
 }
-func (s *Generator) Insert(m map[string]interface{}) *Generator {
+func (s *Generator) Insert(m map[string]any) *Generator {
 	s.insert = m
 	return s
 }
-func (s *Generator) Inserts(m []map[string]interface{}) *Generator {
+func (s *Generator) Inserts(m []map[string]any) *Generator {
 	s.inserts = m
 	return s
 }
@@ -101,8 +101,8 @@ func (s *Generator) AddOrderBy(name string, orderByType string) *Generator {
 	return s
 }
 
-func (s *Generator) CountSql(prepare bool) (string, []interface{}, error) {
-	params := make([]interface{}, 0, 10)
+func (s *Generator) CountSql(prepare bool) (string, []any, error) {
+	params := make([]any, 0, 10)
 	var sql bytes.Buffer
 	sql.WriteString("select count(*) count ")
 	if len(s.tableName) > 0 {
@@ -127,7 +127,7 @@ func (s *Generator) CountSql(prepare bool) (string, []interface{}, error) {
 
 	if s.querys != nil && len(s.querys) > 0 {
 		var source string
-		var param []interface{}
+		var param []any
 		for i, query := range s.querys {
 			if i != 0 {
 				sql.WriteString(" or ")
@@ -143,8 +143,8 @@ func (s *Generator) CountSql(prepare bool) (string, []interface{}, error) {
 	return sql.String(), params, nil
 }
 
-func (s *Generator) SelectSql(prepare bool) (string, []interface{}, error) {
-	params := make([]interface{}, 0, 10)
+func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
+	params := make([]any, 0, 10)
 	var sql bytes.Buffer
 	sql.WriteString("select ")
 	if s.columns == nil {
@@ -174,7 +174,7 @@ func (s *Generator) SelectSql(prepare bool) (string, []interface{}, error) {
 
 	if s.querys != nil && len(s.querys) > 0 {
 		var source string
-		var param []interface{}
+		var param []any
 		for i, query := range s.querys {
 			if i != 0 {
 				sql.WriteString(" or ")
@@ -211,14 +211,14 @@ func (s *Generator) SelectSql(prepare bool) (string, []interface{}, error) {
 	return sql.String(), params, nil
 }
 
-func (s *Generator) DeleteSql(prepare bool) (string, []interface{}, error) {
+func (s *Generator) DeleteSql(prepare bool) (string, []any, error) {
 	if s.tableName == "" {
 		return "", nil, errors.New("tableName is not null")
 	}
 	if s.querys == nil || len(s.querys) == 0 {
 		return "", nil, errors.New("warn: query is not null")
 	}
-	params := make([]interface{}, 0, 10)
+	params := make([]any, 0, 10)
 	var sql bytes.Buffer
 	sql.WriteString("delete from `" + s.tableName + "` ")
 
@@ -234,7 +234,7 @@ func (s *Generator) DeleteSql(prepare bool) (string, []interface{}, error) {
 
 	return sql.String(), params, nil
 }
-func (s *Generator) InsertSql(prepare bool) (string, []interface{}, error) {
+func (s *Generator) InsertSql(prepare bool) (string, []any, error) {
 
 	if s.tableName == "" {
 		return "", nil, errors.New("tableName is not null")
@@ -262,7 +262,7 @@ func (s *Generator) InsertSql(prepare bool) (string, []interface{}, error) {
 	}
 	sql.WriteString(") values")
 	n = 0
-	params := make([]interface{}, 0)
+	params := make([]any, 0)
 	sql.WriteString("(")
 	m := 0
 	for _, field := range fields {
@@ -280,7 +280,7 @@ func (s *Generator) InsertSql(prepare bool) (string, []interface{}, error) {
 	sql.WriteString(")")
 	return sql.String(), params, nil
 }
-func (s *Generator) InsertsSql(prepare bool) (string, []interface{}, error) {
+func (s *Generator) InsertsSql(prepare bool) (string, []any, error) {
 
 	if s.tableName == "" {
 		return "", nil, errors.New("tableName is not null")
@@ -307,7 +307,7 @@ func (s *Generator) InsertsSql(prepare bool) (string, []interface{}, error) {
 	}
 	sql.WriteString(") values")
 	n = 0
-	params := make([]interface{}, 0)
+	params := make([]any, 0)
 	for _, maps := range s.inserts {
 		if n != 0 {
 			sql.WriteString(",")
@@ -332,14 +332,14 @@ func (s *Generator) InsertsSql(prepare bool) (string, []interface{}, error) {
 	return sql.String(), params, nil
 }
 
-func (s *Generator) UpdateSql(prepare bool) (string, []interface{}, error) {
+func (s *Generator) UpdateSql(prepare bool) (string, []any, error) {
 	if s.tableName == "" {
 		return "", nil, errors.New("tableName is not null")
 	}
 	if s.update == nil || len(s.update) <= 0 {
 		return "", nil, errors.New("update is not null")
 	}
-	params := make([]interface{}, 0, 10)
+	params := make([]any, 0, 10)
 	var sql bytes.Buffer
 	sql.WriteString("update `" + s.tableName + "` set ")
 
@@ -371,7 +371,7 @@ func (s *Generator) UpdateSql(prepare bool) (string, []interface{}, error) {
 	return sql.String(), params, nil
 }
 
-func (s *Generator) UpdatesSql(prepare bool) (string, []interface{}, error) {
+func (s *Generator) UpdatesSql(prepare bool) (string, []any, error) {
 
 	if s.tableName == "" {
 		return "", nil, errors.New("tableName is not null")
@@ -387,7 +387,7 @@ func (s *Generator) UpdatesSql(prepare bool) (string, []interface{}, error) {
 	if s.updates == nil || len(s.updates) <= 0 {
 		return "", nil, errors.New("batchSet is not null")
 	}
-	params := make([]interface{}, 0, 10)
+	params := make([]any, 0, 10)
 	var sql bytes.Buffer
 	sql.WriteString("update `" + s.tableName + "` set ")
 

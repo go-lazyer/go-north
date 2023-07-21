@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func PrepareCount(sql string, params []interface{}, db *sql.DB) (int64, error) {
+func PrepareCount(sql string, params []any, db *sql.DB) (int64, error) {
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
@@ -36,7 +36,7 @@ func PrepareCount(sql string, params []interface{}, db *sql.DB) (int64, error) {
 	}
 	return count, nil
 }
-func PrepareFirst(sql string, params []interface{}, structs interface{}, db *sql.DB) error {
+func PrepareFirst(sql string, params []any, structs any, db *sql.DB) error {
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
@@ -59,7 +59,7 @@ func PrepareFirst(sql string, params []interface{}, structs interface{}, db *sql
 	return nil
 }
 
-func PrepareQuery(sql string, params []interface{}, results interface{}, db *sql.DB) error {
+func PrepareQuery(sql string, params []any, results any, db *sql.DB) error {
 	if db == nil {
 		return errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -86,7 +86,7 @@ func PrepareQuery(sql string, params []interface{}, results interface{}, db *sql
 }
 
 // 预处理插入 返回批量自增ID
-func PrepareInsert(sql string, params []interface{}, db *sql.DB) (int64, error) {
+func PrepareInsert(sql string, params []any, db *sql.DB) (int64, error) {
 	if db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -111,7 +111,7 @@ func PrepareInsert(sql string, params []interface{}, db *sql.DB) (int64, error) 
 	return id, nil
 }
 
-func PrepareUpdate(sql string, params []interface{}, db *sql.DB) (int64, error) {
+func PrepareUpdate(sql string, params []any, db *sql.DB) (int64, error) {
 	if db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -130,7 +130,7 @@ func PrepareUpdate(sql string, params []interface{}, db *sql.DB) (int64, error) 
 	}
 	return n, nil
 }
-func PrepareSave(sql string, params []interface{}, db *sql.DB) (int64, error) {
+func PrepareSave(sql string, params []any, db *sql.DB) (int64, error) {
 	if db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -149,7 +149,7 @@ func PrepareSave(sql string, params []interface{}, db *sql.DB) (int64, error) {
 	}
 	return n, nil
 }
-func PrepareDelete(sql string, params []interface{}, db *sql.DB) (int64, error) {
+func PrepareDelete(sql string, params []any, db *sql.DB) (int64, error) {
 	if db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -205,7 +205,7 @@ func getFieldInfo(typ reflect.Type) map[string][]int {
 	return finfo
 }
 
-func RowsToStructs(rows *sql.Rows, results interface{}) (err error) {
+func RowsToStructs(rows *sql.Rows, results any) (err error) {
 	columns, err := rows.Columns()
 	if err != nil {
 		return err
@@ -225,12 +225,12 @@ func RowsToStructs(rows *sql.Rows, results interface{}) (err error) {
 			struRV = reflect.Indirect(reflect.New(elemRT))
 			struField = struRV
 		}
-		var values []interface{}
+		var values []any
 		for _, column := range columns {
 			idx, ok := fieldInfo[strings.ToLower(column)]
-			var v interface{}
+			var v any
 			if !ok {
-				var i interface{}
+				var i any
 				v = &i
 			} else {
 				v = struField.FieldByIndex(idx).Addr().Interface()
@@ -249,7 +249,7 @@ func RowsToStructs(rows *sql.Rows, results interface{}) (err error) {
 	reflect.Indirect(reflect.ValueOf(results)).Set(strusRV)
 	return nil
 }
-func RowsToStruct(rows *sql.Rows, result interface{}) (err error) {
+func RowsToStruct(rows *sql.Rows, result any) (err error) {
 	struRT := reflect.TypeOf(result).Elem()
 
 	strusPtrRV := reflect.New(reflect.SliceOf(struRT))
@@ -264,12 +264,12 @@ func RowsToStruct(rows *sql.Rows, result interface{}) (err error) {
 	reflect.Indirect(reflect.ValueOf(result)).Set(strusRV.Index(0))
 	return
 }
-func RowsToCnts(rows *sql.Rows, cnts interface{}) (err error) {
+func RowsToCnts(rows *sql.Rows, cnts any) (err error) {
 	cntsRV := reflect.Indirect(reflect.ValueOf(cnts))
 	elemRT := cntsRV.Type().Elem()
 
 	for rows.Next() {
-		var values []interface{}
+		var values []any
 		var cntRV reflect.Value
 		if elemRT.Kind() == reflect.Ptr {
 			cntRV = reflect.New(elemRT.Elem())
@@ -292,7 +292,7 @@ func RowsToCnts(rows *sql.Rows, cnts interface{}) (err error) {
 	return
 }
 
-func RowsToCnt(rows *sql.Rows, cnt interface{}) (err error) {
+func RowsToCnt(rows *sql.Rows, cnt any) (err error) {
 	cntRT := reflect.TypeOf(cnt).Elem()
 
 	cntsPtrRV := reflect.New(reflect.SliceOf(cntRT))
