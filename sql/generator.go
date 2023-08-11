@@ -126,6 +126,7 @@ func (s *Generator) CountSql(prepare bool) (string, []any, error) {
 	}
 
 	if s.querys != nil && len(s.querys) > 0 {
+		sql.WriteString(" where   ")
 		var source string
 		var param []any
 		for i, query := range s.querys {
@@ -133,10 +134,8 @@ func (s *Generator) CountSql(prepare bool) (string, []any, error) {
 				sql.WriteString(" or ")
 			}
 			source, param, _ = query.Source(s.tableName, prepare)
+			sql.WriteString(" " + source + " ")
 			params = append(params, param...)
-		}
-		if strings.TrimSpace(source) != "" {
-			sql.WriteString(" where   " + source + " ")
 		}
 	}
 
@@ -173,6 +172,7 @@ func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
 	}
 
 	if s.querys != nil && len(s.querys) > 0 {
+		sql.WriteString(" where   ")
 		var source string
 		var param []any
 		for i, query := range s.querys {
@@ -180,10 +180,8 @@ func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
 				sql.WriteString(" or ")
 			}
 			source, param, _ = query.Source(s.tableName, prepare)
+			sql.WriteString(" " + source + " ")
 			params = append(params, param...)
-		}
-		if strings.TrimSpace(source) != "" {
-			sql.WriteString(" where   " + source + " ")
 		}
 	}
 
