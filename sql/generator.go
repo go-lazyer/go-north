@@ -172,16 +172,22 @@ func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
 	}
 
 	if s.querys != nil && len(s.querys) > 0 {
-		sql.WriteString(" where   ")
 		var source string
 		var param []any
-		for i, query := range s.querys {
-			if i != 0 {
+		n := 0
+		for _, query := range s.querys {
+			source, param, _ = query.Source(s.tableName, prepare)
+			if source == "" {
+				continue
+			}
+			if n == 0 {
+				sql.WriteString(" where   ")
+			} else {
 				sql.WriteString(" or ")
 			}
-			source, param, _ = query.Source(s.tableName, prepare)
 			sql.WriteString(" " + source + " ")
 			params = append(params, param...)
+			n = n + 1
 		}
 	}
 

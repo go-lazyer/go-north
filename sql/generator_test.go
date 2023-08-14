@@ -13,7 +13,8 @@ func TestGenerator_CountSql(t *testing.T) {
 }
 func TestGenerator_SelectSql(t *testing.T) {
 	//select * from user
-	gen := NewGenerator().Table("user")
+	query1 := NewBoolQuery()
+	gen := NewGenerator().Table("user").Where(query1)
 	fmt.Println(gen.SelectSql(false))
 
 	//select * from user where t.id=1000
