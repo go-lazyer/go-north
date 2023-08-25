@@ -620,7 +620,7 @@ func getDaoTemplate() string {
 				}
 				return QueryMapBySql(sqlStr, params)
 			}
-			{{end}}
+			
 			
 			// query map by gen
 			func QueryMapByGen(gen *generator.Generator) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
@@ -649,7 +649,7 @@ func getDaoTemplate() string {
 				}
 				return {{.TableNameLowerCamel}}Map,nil
 			}
-
+			{{end}}
 			// count by gen
 			func CountByGen(gen *generator.Generator) (int64, error) {
 				sqlStr, params, err := gen.CountSql(true)
