@@ -217,10 +217,10 @@ func (gen *Generator) Gen(modules []Module) error {
 			fmt.Printf("error:create table %v error=%v", module.TableName, err)
 			continue
 		}
-		if primaryKeyFields == nil || len(primaryKeyFields) == 0 {
-			fmt.Printf("error:table %v no primary key", module.TableName)
-			continue
-		}
+		// if primaryKeyFields == nil || len(primaryKeyFields) == 0 {
+		// 	fmt.Printf("error:table %v no primary key", module.TableName)
+		// 	continue
+		// }
 		tableName := module.TableName
 		module.CreateTime = time.Now().Format("2006-01:02 15:04:05.006")
 		module.Fields = fields
@@ -420,7 +420,7 @@ func getServiceTemplate() string {
 				generator "github.com/go-lazyer/go-generator/sql"
 			)
 
-
+			{{ if gt (len .PrimaryKeyFields) 0 -}} 
 			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
 				{{.TableNameLowerCamel}}, err := dao.QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }}   {{end}})
 				if err != nil {
@@ -428,7 +428,7 @@ func getServiceTemplate() string {
 				}
 				return {{.TableNameLowerCamel}},nil
 			}
-
+			{{end}}
 
 			func QueryByParam({{.TableNameLowerCamel}}Param *param.{{.TableNameUpperCamel}}Param) ([]model.{{.TableNameUpperCamel}}Model, error) {
 				query := generator.NewBoolQuery()
@@ -573,6 +573,7 @@ func getDaoTemplate() string {
 				"database/sql"
 				"github.com/pkg/errors"
 			)
+			{{ if gt (len .PrimaryKeyFields) 0 -}}
 			// query first by primaryKey
 			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
 				{{ if eq (len .PrimaryKeyFields) 1 -}} 
@@ -588,6 +589,7 @@ func getDaoTemplate() string {
 				}
 				return QueryFirstBySql(sqlStr, params)
 			}
+			{{ end -}}
 			// query first by gen
 			func QueryFirstByGen(gen *generator.Generator) (*model.{{.TableNameUpperCamel}}Model, error) {
 				sqlStr, params, err := gen.SelectSql(true)
@@ -842,7 +844,7 @@ func getDaoTemplate() string {
 				}
 				return id, nil
 			}
-
+			{{ if gt (len .PrimaryKeyFields) 0 -}}
 			func DeleteByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (int64, error) {
 				{{ if eq (len .PrimaryKeyFields) 1 -}} 
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}}))
@@ -857,6 +859,8 @@ func getDaoTemplate() string {
 				}
 				return DeleteBySql(sqlStr, params)
 			}
+			{{ end -}}
+			{{ if gt (len .PrimaryKeyFields) 0 -}}
 			func DeleteByPrimaryKeys(primaryKeys []any) (int64, error) {
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, primaryKeys))
 				sqlStr, params, err := gen.DeleteSql(true)
@@ -866,6 +870,7 @@ func getDaoTemplate() string {
 				}
 				return DeleteBySql(sqlStr, params)
 			}
+			{{ end -}}
 			func DeleteByGen(gen *generator.Generator) (int64, error) {
 				sqlStr, params, err := gen.DeleteSql(true)
 				if err != nil {
