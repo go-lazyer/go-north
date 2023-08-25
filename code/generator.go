@@ -601,16 +601,13 @@ func getDaoTemplate() string {
 			}
 			// query first by sql
 			func QueryFirstBySql(sqlStr string, params []any) (*model.{{.TableNameUpperCamel}}Model, error) {
-				var {{.TableNameLowerCamel}} model.{{.TableNameUpperCamel}}Model
-				err := dbutil.PrepareFirst(sqlStr, params, &{{.TableNameLowerCamel}},&sql.DB{})
+				var {{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model
+				err := dbutil.PrepareFirst(sqlStr, params, {{.TableNameLowerCamel}},&sql.DB{})
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err
 				}
-				if {{.TableNameLowerCamel}}.{{(index .PrimaryKeyFields 0).FieldName}}.{{(index .PrimaryKeyFields 0).FieldNullTypeValue}} == {{(index .PrimaryKeyFields 0).FieldTypeDefault}} {
-					return nil,nil
-				}
-				return &{{.TableNameLowerCamel}},nil
+				return {{.TableNameLowerCamel}},nil
 			}
 			{{if eq (len .PrimaryKeyFields) 1}} 
 			// query map by primaryKeys
