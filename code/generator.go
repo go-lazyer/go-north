@@ -571,8 +571,16 @@ func getDaoTemplate() string {
 				generator "github.com/go-lazyer/go-generator/sql"
 				"{{.ModelPackagePath}}"
 				"database/sql"
+				"fmt"
 				"github.com/pkg/errors"
 			)
+			var db *sql.DB
+
+			func init() {
+				if db == nil {
+					fmt.Println("db is nil ,need init")
+				}
+			}
 			{{ if gt (len .PrimaryKeyFields) 0 -}}
 			// query first by primaryKey
 			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
@@ -602,7 +610,7 @@ func getDaoTemplate() string {
 			// query first by sql
 			func QueryFirstBySql(sqlStr string, params []any) (*model.{{.TableNameUpperCamel}}Model, error) {
 				var {{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model
-				err := dbutil.PrepareFirst(sqlStr, params, {{.TableNameLowerCamel}},&sql.DB{})
+				err := dbutil.PrepareFirst(sqlStr, params, {{.TableNameLowerCamel}},db)
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err
@@ -635,7 +643,7 @@ func getDaoTemplate() string {
 			// query map by sql
 			func QueryMapBySql(sqlStr string, params []any) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
 				{{.TableNameLowerCamel}}s := make([]model.{{.TableNameUpperCamel}}Model, 0)
-				err := dbutil.PrepareQuery(sqlStr, params, &{{.TableNameLowerCamel}}s,&sql.DB{})
+				err := dbutil.PrepareQuery(sqlStr, params, &{{.TableNameLowerCamel}}s,db)
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err
@@ -662,7 +670,7 @@ func getDaoTemplate() string {
 			}
 			// count by gen
 			func CountBySql(sqlStr string, params []any) (int64, error) {
-				count, err := dbutil.PrepareCount(sqlStr, params,&sql.DB{})
+				count, err := dbutil.PrepareCount(sqlStr, params,db)
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0,err
@@ -682,7 +690,7 @@ func getDaoTemplate() string {
 			// query by sql
 			func QueryBySql(sqlStr string, params []any) ([]model.{{.TableNameUpperCamel}}Model, error) {
 				{{.TableNameLowerCamel}}s := make([]model.{{.TableNameUpperCamel}}Model, 0)
-				err := dbutil.PrepareQuery(sqlStr, params, &{{.TableNameLowerCamel}}s,&sql.DB{})
+				err := dbutil.PrepareQuery(sqlStr, params, &{{.TableNameLowerCamel}}s,db)
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err
@@ -703,7 +711,7 @@ func getDaoTemplate() string {
 			// query extend by sql
 			func QueryExtendBySql(sqlStr string, params []any) ([]model.{{.TableNameUpperCamel}}Extend, error) {
 				{{.TableNameLowerCamel}}Extends := make([]model.{{.TableNameUpperCamel}}Extend, 0)
-				err := dbutil.PrepareQuery(sqlStr, params, &{{.TableNameLowerCamel}}Extends,&sql.DB{})
+				err := dbutil.PrepareQuery(sqlStr, params, &{{.TableNameLowerCamel}}Extends,db)
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err
@@ -730,7 +738,7 @@ func getDaoTemplate() string {
 			}
 			
 			func InsertBySql(sqlStr string, params []any) (int64, error) {
-				id, err := dbutil.PrepareInsert(sqlStr, params, &sql.DB{})
+				id, err := dbutil.PrepareInsert(sqlStr, params, db)
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0, err
@@ -759,7 +767,7 @@ func getDaoTemplate() string {
 
 			//batch insert
 			func InsertsBySql(sqlStr string, params []any) (int64, error) {
-				id, err := dbutil.PrepareInsert(sqlStr, params, &sql.DB{})
+				id, err := dbutil.PrepareInsert(sqlStr, params, db)
 				if err != nil {
 					return 0, errors.WithStack(err)
 				}
@@ -790,7 +798,7 @@ func getDaoTemplate() string {
 				return UpdateBySql(sqlStr, params)
 			}
 			func UpdateBySql(sqlStr string, params []any) (int64, error) {
-				count, err := dbutil.PrepareUpdate(sqlStr, params,&sql.DB{})
+				count, err := dbutil.PrepareUpdate(sqlStr, params,db)
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0, err
@@ -818,7 +826,7 @@ func getDaoTemplate() string {
 
 			//batch update
 			func UpdatesBySql(sqlStr string, params []any) (int64, error) {
-				id, err := dbutil.PrepareUpdate(sqlStr, params, &sql.DB{})
+				id, err := dbutil.PrepareUpdate(sqlStr, params, db)
 				if err != nil {
 					return 0, errors.WithStack(err)
 				}
@@ -834,7 +842,7 @@ func getDaoTemplate() string {
 			}
 			
 			func SaveBySql(sqlStr string, params []any) (int64, error) {
-				id, err := dbutil.PrepareSave(sqlStr, params, &sql.DB{})
+				id, err := dbutil.PrepareSave(sqlStr, params, db)
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0, err
@@ -877,7 +885,7 @@ func getDaoTemplate() string {
 				return DeleteBySql(sqlStr, params)
 			}
 			func DeleteBySql(sqlStr string, params []any) (int64, error) {
-				count, err := dbutil.PrepareDelete(sqlStr, params, &sql.DB{})
+				count, err := dbutil.PrepareDelete(sqlStr, params, db)
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0, err
