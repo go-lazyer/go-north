@@ -59,6 +59,30 @@ func PrepareFirst(sql string, params []any, structs any, db *sql.DB) error {
 	return nil
 }
 
+//普通查询
+func Query(sql string, params []any, results any, db *sql.DB) error {
+	if db == nil {
+		return errors.New("db not allowed to be nil,need to instantiate yourself")
+	}
+	serverMode := os.Getenv("sql.log")
+	if serverMode == "stdout" {
+		fmt.Printf("sql is %v\n", sql)
+		fmt.Printf("params is %v\n", params)
+	}
+
+	rows, err := db.Query(sql, params...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	err = RowsToStructs(rows, results)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+//预处理查询
 func PrepareQuery(sql string, params []any, results any, db *sql.DB) error {
 	if db == nil {
 		return errors.New("db not allowed to be nil,need to instantiate yourself")
