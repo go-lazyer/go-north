@@ -738,7 +738,7 @@ func getDaoTemplate() string {
 			}
 			
 			func InsertBySql(sqlStr string, params []any) (int64, error) {
-				id, err := dbutil.PrepareInsert(sqlStr, params, db)
+				id, err := dbutil.PrepareInsert(sqlStr, params, getDatabase())
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0, err
@@ -767,7 +767,7 @@ func getDaoTemplate() string {
 
 			//batch insert
 			func InsertsBySql(sqlStr string, params []any) (int64, error) {
-				id, err := dbutil.PrepareInsert(sqlStr, params, db)
+				id, err := dbutil.PrepareInsert(sqlStr, params, getDatabase())
 				if err != nil {
 					return 0, errors.WithStack(err)
 				}
@@ -826,7 +826,7 @@ func getDaoTemplate() string {
 
 			//batch update
 			func UpdatesBySql(sqlStr string, params []any) (int64, error) {
-				id, err := dbutil.PrepareUpdate(sqlStr, params, db)
+				id, err := dbutil.PrepareUpdate(sqlStr, params, getDatabase())
 				if err != nil {
 					return 0, errors.WithStack(err)
 				}
@@ -842,7 +842,7 @@ func getDaoTemplate() string {
 			}
 			
 			func SaveBySql(sqlStr string, params []any) (int64, error) {
-				id, err := dbutil.PrepareSave(sqlStr, params, db)
+				id, err := dbutil.PrepareSave(sqlStr, params, getDatabase())
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0, err
@@ -885,7 +885,7 @@ func getDaoTemplate() string {
 				return DeleteBySql(sqlStr, params)
 			}
 			func DeleteBySql(sqlStr string, params []any) (int64, error) {
-				count, err := dbutil.PrepareDelete(sqlStr, params, db)
+				count, err := dbutil.PrepareDelete(sqlStr, params, getDatabase())
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0, err
