@@ -15,6 +15,7 @@ const (
 
 type Generator struct {
 	orderBy   []string //排序字段
+	groupBy   []string //分组字段
 	pageStart int
 	pageSize  int
 	pageNum   int
@@ -101,6 +102,18 @@ func (s *Generator) AddOrderBy(name string, orderByType string) *Generator {
 	return s
 }
 
+func (s *Generator) GroupBy(groupBy []string) *Generator {
+	s.groupBy = groupBy
+	return s
+}
+func (s *Generator) AddGroupBy(name string) *Generator {
+	if s.groupBy == nil {
+		s.groupBy = make([]string, 0)
+	}
+	s.groupBy = append(s.groupBy, name)
+	return s
+}
+
 func (s *Generator) CountSql(prepare bool) (string, []any, error) {
 	params := make([]any, 0, 10)
 	var sql bytes.Buffer
@@ -143,7 +156,7 @@ func (s *Generator) CountSql(prepare bool) (string, []any, error) {
 }
 
 func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
-	params := make([]any, 0, 10)
+	params := make([]any, 0)
 	var sql bytes.Buffer
 	sql.WriteString("select ")
 	if s.columns == nil {
@@ -190,7 +203,15 @@ func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
 			n = n + 1
 		}
 	}
-
+	if s.groupBy != nil && len(s.groupBy) > 0 {
+		sql.WriteString(" group by   ")
+		for n, v := range s.groupBy {
+			if n != 0 {
+				sql.WriteString(", ")
+			}
+			sql.WriteString(v)
+		}
+	}
 	if s.orderBy != nil && len(s.orderBy) > 0 {
 		sql.WriteString(" order by   ")
 		for n, v := range s.orderBy {

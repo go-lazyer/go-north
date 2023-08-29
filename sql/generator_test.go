@@ -11,39 +11,57 @@ func TestGenerator_CountSql(t *testing.T) {
 	gen := NewGenerator().Table("user").Where(query)
 	fmt.Println(gen.CountSql(false))
 }
-func TestGenerator_SelectSql(t *testing.T) {
+
+func TestGenerator_GroupSql(t *testing.T) {
+	//select count(1) count from user where t.id>1000
+	query := NewGreaterThanQuery("id", 1000)
+	gen := NewGenerator().Table("user").Where(query)
+	fmt.Println(gen.CountSql(false))
+}
+
+func TestGenerator_SelectSql1(t *testing.T) {
 	//select * from user
 	query1 := NewBoolQuery()
 	gen := NewGenerator().Table("user").Where(query1)
 	fmt.Println(gen.SelectSql(false))
-
+}
+func TestGenerator_SelectSql2(t *testing.T) {
 	//select * from user where t.id=1000
 	query := NewEqualQuery("id", 1000)
-	gen = NewGenerator().Table("user").Where(query)
+	gen := NewGenerator().Table("user").Where(query)
 	fmt.Println(gen.SelectSql(false))
-
+}
+func TestGenerator_SelectSql3(t *testing.T) {
 	// select * from user where id=1000 and age>20 order by age desc
 	idQuery := NewEqualQuery("id", 1000)
 	ageQuery := NewGreaterThanQuery("age", 20)
 	boolQuery := NewBoolQuery().And(idQuery, ageQuery)
-	gen = NewGenerator().Table("user").Where(boolQuery).AddOrderBy("age", "desc")
+	gen := NewGenerator().Table("user").Where(boolQuery).AddOrderBy("age", "desc")
 	fmt.Println(gen.SelectSql(false))
-
+}
+func TestGenerator_SelectSql4(t *testing.T) {
 	// select id,name,age from user where (id=1000 and age>20) or age <=10 order by age desc ,id asc
-	idQuery = NewEqualQuery("id", 1000)
-	ageQuery = NewGreaterThanQuery("age", 20)
-	boolQuery = NewBoolQuery().And(idQuery, ageQuery)
+	idQuery := NewEqualQuery("id", 1000)
+	ageQuery := NewGreaterThanQuery("age", 20)
+	boolQuery := NewBoolQuery().And(idQuery, ageQuery)
 	ageQuery2 := NewLessThanOrEqualQuery("age", 10)
-	gen = NewGenerator().Result("id", "name", "age").Table("user").Where(boolQuery, ageQuery2).AddOrderBy("age", "desc").AddOrderBy("id", "asc")
+	gen := NewGenerator().Result("id", "name", "age").Table("user").Where(boolQuery, ageQuery2).AddOrderBy("age", "desc").AddOrderBy("id", "asc")
 	fmt.Println(gen.SelectSql(false))
-
+}
+func TestGenerator_SelectSql5(t *testing.T) {
 	// select user.id,order.id  from user join order on user.id=order.user_id where user.id='10000'
-	idQuery = NewEqualQuery("id", 1000)
+	idQuery := NewEqualQuery("id", 1000)
 
 	join := NewJoin("order", INNER_JOIN).Condition("user", "id", "order", "user_id")
-	gen = NewGenerator().Result("user.id", "order.id").Table("user").Join(join).Where(idQuery)
+	gen := NewGenerator().Result("user.id", "order.id").Table("user").Join(join).Where(idQuery)
 	fmt.Println(gen.SelectSql(false))
+}
 
+func TestGenerator_SelectSql6(t *testing.T) {
+	// select user.sex,count(user.sex) count  from user group by user.sex
+
+	gen := NewGenerator().Result("user.sex", "count(user.sex) count").Table("user").AddGroupBy("user.sex")
+	fmt.Println(gen.SelectSql(false))
 }
 
 func TestGenerator_UpdateSql(t *testing.T) {
