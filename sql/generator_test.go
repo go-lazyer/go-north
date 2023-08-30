@@ -60,7 +60,7 @@ func TestGenerator_SelectSql5(t *testing.T) {
 func TestGenerator_SelectSql6(t *testing.T) {
 	// select user.sex,count(user.sex) count  from user group by user.sex
 
-	gen := NewGenerator().Result("user.sex", "count(user.sex) count").Table("user").AddGroupBy("user.sex")
+	gen := NewGenerator().Result("user.sex", "count(user.sex) count").Table("user").AddGroupBy("user", "sex")
 	fmt.Println(gen.SelectSql(false))
 }
 

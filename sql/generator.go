@@ -106,11 +106,11 @@ func (s *Generator) GroupBy(groupBy []string) *Generator {
 	s.groupBy = groupBy
 	return s
 }
-func (s *Generator) AddGroupBy(name string) *Generator {
+func (s *Generator) AddGroupBy(tableName, name string) *Generator {
 	if s.groupBy == nil {
 		s.groupBy = make([]string, 0)
 	}
-	s.groupBy = append(s.groupBy, name)
+	s.groupBy = append(s.groupBy, tableName+"."+name)
 	return s
 }
 
