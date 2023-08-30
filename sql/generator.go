@@ -156,6 +156,9 @@ func (s *Generator) CountSql(prepare bool) (string, []any, error) {
 }
 
 func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
+	if s.tableName == "" {
+		return "", nil, errors.New("tableName is not null")
+	}
 	params := make([]any, 0)
 	var sql bytes.Buffer
 	sql.WriteString("select ")
@@ -164,9 +167,7 @@ func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
 	} else {
 		sql.WriteString(strings.Join(s.columns, ","))
 	}
-	if len(s.tableName) > 0 {
-		sql.WriteString(" from  `" + s.tableName + "`")
-	}
+	sql.WriteString(" from  `" + s.tableName + "`")
 
 	if s.joins != nil && len(s.joins) > 0 {
 		for _, join := range s.joins {
