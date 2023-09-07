@@ -9,6 +9,29 @@ import (
 	"strings"
 )
 
+func Count(sql string, params []any, db *sql.DB) (int64, error) {
+	serverMode := os.Getenv("sql.log")
+	if serverMode == "stdout" {
+		fmt.Printf("sql is %v\n", sql)
+		fmt.Printf("params is %v\n", params)
+	}
+
+	rows, err := db.Query(sql, params...)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+
+	var count int64
+	for rows.Next() {
+		err := rows.Scan(&count)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return count, nil
+}
+
 func PrepareCount(sql string, params []any, db *sql.DB) (int64, error) {
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
@@ -69,7 +92,6 @@ func Query(sql string, params []any, results any, db *sql.DB) error {
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
-
 	rows, err := db.Query(sql, params...)
 	if err != nil {
 		return err
