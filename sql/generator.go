@@ -200,8 +200,12 @@ func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
 		var source string
 		var param []any
 		n := 0
+		table := s.tableName
+		if s.tableAlias != "" {
+			table = s.tableAlias
+		}
 		for _, query := range s.querys {
-			source, param, _ = query.Source(s.tableName, prepare)
+			source, param, _ = query.Source(table, prepare)
 			if source == "" {
 				continue
 			}
