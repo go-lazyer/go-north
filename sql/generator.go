@@ -14,20 +14,21 @@ const (
 )
 
 type Generator struct {
-	orderBy   []string //排序字段
-	groupBy   []string //分组字段
-	pageStart int
-	pageSize  int
-	pageNum   int
-	querys    []Query
-	update    map[string]any
-	updates   map[any]map[string]any
-	insert    map[string]any
-	inserts   []map[string]any
-	joins     []*Join
-	tableName string
-	primary   string //主键
-	columns   []string
+	orderBy    []string //排序字段
+	groupBy    []string //分组字段
+	pageStart  int
+	pageSize   int
+	pageNum    int
+	querys     []Query
+	update     map[string]any
+	updates    map[any]map[string]any
+	insert     map[string]any
+	inserts    []map[string]any
+	joins      []*Join
+	tableName  string
+	tableAlias string
+	primary    string //主键
+	columns    []string
 }
 
 func NewGenerator() *Generator {
@@ -68,6 +69,12 @@ func (s *Generator) Join(join ...*Join) *Generator {
 }
 func (s *Generator) Table(tableName string) *Generator {
 	s.tableName = tableName
+	return s
+}
+
+// 表的别名
+func (s *Generator) TableAlias(tableAlias string) *Generator {
+	s.tableAlias = tableAlias
 	return s
 }
 func (s *Generator) Primary(primary string) *Generator {
@@ -168,6 +175,10 @@ func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
 		sql.WriteString(strings.Join(s.columns, ","))
 	}
 	sql.WriteString(" from  `" + s.tableName + "`")
+
+	if s.tableAlias != "" {
+		sql.WriteString(" " + s.tableAlias + " ")
+	}
 
 	if s.joins != nil && len(s.joins) > 0 {
 		for _, join := range s.joins {
