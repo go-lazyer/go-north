@@ -305,7 +305,7 @@ func NewFieldEqualQuery(firstField, secondField string) *FieldEqualQuery {
 }
 
 func (q *FieldEqualQuery) Source(table string, prepare bool) (string, []any, error) {
-	return fmt.Sprintf("%s.%s = %s.%s", table, q.firstField, table, q.secondField), []any{}, nil
+	return fmt.Sprintf("%s = %s", q.firstField, q.secondField), []any{}, nil
 }
 
 type BoolQuery struct {
