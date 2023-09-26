@@ -124,7 +124,14 @@ func (s *Generator) AddGroupBy(tableName, name string) *Generator {
 func (s *Generator) CountSql(prepare bool) (string, []any, error) {
 	params := make([]any, 0, 10)
 	var sql bytes.Buffer
-	sql.WriteString("select count(*) count ")
+	sql.WriteString("select ")
+
+	if s.columns == nil {
+		sql.WriteString(" count(*) count  ")
+	} else {
+		sql.WriteString(strings.Join(s.columns, ","))
+	}
+
 	if len(s.tableName) > 0 {
 		sql.WriteString(" from  `" + s.tableName + "`")
 	}
