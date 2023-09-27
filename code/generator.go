@@ -406,6 +406,24 @@ func getViewTemplate() string {
 			views = append(views, *ConvertExtend(&extend))
 		}
 		return views
+	}
+	func ConvertToMap(m *model.{{.TableNameUpperCamel}}Model) map[string]any {
+		view := make(map[string]any)
+		{{range $field := .Fields}}
+			if m.{{ .FieldName }}.Valid {
+				view[model.{{- .ColumnNameUpper -}}] = m.{{ .FieldName }}.{{ .FieldNullTypeValue}}
+			} else {
+				view[model.{{- .ColumnNameUpper -}}] = nil
+			}
+		{{end}}
+		return view
+	}
+	func ConvertsToMap(models []model.{{.TableNameUpperCamel}}Model) []map[string]any {
+		views := make([]map[string]any, 0, len(models))
+		for _, model := range models {
+			views = append(views, ConvertToMap(&model))
+		}
+		return views
 	}`
 }
 func getServiceTemplate() string {
