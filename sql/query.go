@@ -308,6 +308,19 @@ func (q *FieldEqualQuery) Source(table string, prepare bool) (string, []any, err
 	return fmt.Sprintf("%s = %s", q.firstField, q.secondField), []any{}, nil
 }
 
+type FieldNotEqualQuery struct {
+	firstField  string
+	secondField string
+}
+
+func NewFieldNotEqualQuery(firstField, secondField string) *FieldNotEqualQuery {
+	return &FieldNotEqualQuery{firstField: firstField, secondField: secondField}
+}
+
+func (q *FieldNotEqualQuery) Source(table string, prepare bool) (string, []any, error) {
+	return fmt.Sprintf("%s != %s", q.firstField, q.secondField), []any{}, nil
+}
+
 type BoolQuery struct {
 	query []Query
 }
