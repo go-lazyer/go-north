@@ -122,6 +122,9 @@ func (s *Generator) AddGroupBy(tableName, name string) *Generator {
 }
 
 func (s *Generator) CountSql(prepare bool) (string, []any, error) {
+	if s.tableName == "" {
+		return "", nil, errors.New("tableName cannot be empty")
+	}
 	params := make([]any, 0, 10)
 	var sql bytes.Buffer
 	sql.WriteString("select ")
@@ -132,8 +135,10 @@ func (s *Generator) CountSql(prepare bool) (string, []any, error) {
 		sql.WriteString(strings.Join(s.columns, ","))
 	}
 
-	if len(s.tableName) > 0 {
-		sql.WriteString(" from  `" + s.tableName + "`")
+	sql.WriteString(" from  `" + s.tableName + "`")
+
+	if s.tableAlias != "" {
+		sql.WriteString(" " + s.tableAlias + " ")
 	}
 
 	if s.joins != nil && len(s.joins) > 0 {
@@ -171,7 +176,7 @@ func (s *Generator) CountSql(prepare bool) (string, []any, error) {
 
 func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
 	if s.tableName == "" {
-		return "", nil, errors.New("tableName is not null")
+		return "", nil, errors.New("tableName cannot be empty")
 	}
 	params := make([]any, 0)
 	var sql bytes.Buffer
@@ -250,7 +255,7 @@ func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
 		}
 		params = append(params, s.pageStart, s.pageSize)
 		if prepare {
-			sql.WriteString(fmt.Sprintf(" limit ?,?"))
+			sql.WriteString(" limit ?,?")
 		} else {
 			sql.WriteString(fmt.Sprintf(" limit %d,%d", s.pageStart, s.pageSize))
 		}
@@ -261,10 +266,10 @@ func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
 
 func (s *Generator) DeleteSql(prepare bool) (string, []any, error) {
 	if s.tableName == "" {
-		return "", nil, errors.New("tableName is not null")
+		return "", nil, errors.New("tableName cannot be empty")
 	}
 	if s.querys == nil || len(s.querys) == 0 {
-		return "", nil, errors.New("warn: query is not null")
+		return "", nil, errors.New("warn: query cannot be empty")
 	}
 	params := make([]any, 0, 10)
 	var sql bytes.Buffer
@@ -285,10 +290,10 @@ func (s *Generator) DeleteSql(prepare bool) (string, []any, error) {
 func (s *Generator) InsertSql(prepare bool) (string, []any, error) {
 
 	if s.tableName == "" {
-		return "", nil, errors.New("tableName is not null")
+		return "", nil, errors.New("tableName  cannot be empty")
 	}
 	if s.insert == nil || len(s.insert) == 0 {
-		return "", nil, errors.New("The insert is not null")
+		return "", nil, errors.New("The insert  cannot be empty")
 	}
 	//把所有要修改的字段提取出来
 	fields := make([]string, 0)
@@ -331,10 +336,10 @@ func (s *Generator) InsertSql(prepare bool) (string, []any, error) {
 func (s *Generator) InsertsSql(prepare bool) (string, []any, error) {
 
 	if s.tableName == "" {
-		return "", nil, errors.New("tableName is not null")
+		return "", nil, errors.New("tableName  cannot be empty")
 	}
 	if s.inserts == nil || len(s.inserts) == 0 {
-		return "", nil, errors.New("The inserts is not null")
+		return "", nil, errors.New("The inserts  cannot be empty")
 	}
 	//把所有要修改的字段提取出来
 	fields := make([]string, 0)
@@ -382,10 +387,10 @@ func (s *Generator) InsertsSql(prepare bool) (string, []any, error) {
 
 func (s *Generator) UpdateSql(prepare bool) (string, []any, error) {
 	if s.tableName == "" {
-		return "", nil, errors.New("tableName is not null")
+		return "", nil, errors.New("tableName i cannot be empty")
 	}
 	if s.update == nil || len(s.update) <= 0 {
-		return "", nil, errors.New("update is not null")
+		return "", nil, errors.New("update  cannot be empty")
 	}
 	params := make([]any, 0, 10)
 	var sql bytes.Buffer
@@ -422,10 +427,10 @@ func (s *Generator) UpdateSql(prepare bool) (string, []any, error) {
 func (s *Generator) UpdatesSql(prepare bool) (string, []any, error) {
 
 	if s.tableName == "" {
-		return "", nil, errors.New("tableName is not null")
+		return "", nil, errors.New("tableName  cannot be empty")
 	}
 	if s.primary == "" {
-		return "", nil, errors.New("primary is not null")
+		return "", nil, errors.New("primary cannot be empty")
 	}
 
 	if s.querys == nil || len(s.querys) != 1 {
@@ -433,7 +438,7 @@ func (s *Generator) UpdatesSql(prepare bool) (string, []any, error) {
 	}
 
 	if s.updates == nil || len(s.updates) <= 0 {
-		return "", nil, errors.New("batchSet is not null")
+		return "", nil, errors.New("batchSet cannot be empty")
 	}
 	params := make([]any, 0, 10)
 	var sql bytes.Buffer
