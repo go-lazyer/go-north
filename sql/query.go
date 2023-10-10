@@ -78,6 +78,7 @@ func (q *NotBetweenQuery) Source(table string, prepare bool) (string, []any, err
 }
 
 type EqualQuery struct {
+	table string
 	field string
 	value any
 }
@@ -85,8 +86,14 @@ type EqualQuery struct {
 func NewEqualQuery(field string, value any) *EqualQuery {
 	return &EqualQuery{field: field, value: value}
 }
+func NewEqualQueryWithTable(table, field string, value any) *EqualQuery {
+	return &EqualQuery{table: table, field: field, value: value}
+}
 
 func (q *EqualQuery) Source(table string, prepare bool) (string, []any, error) {
+	if q.table != "" {
+		table = q.table
+	}
 	if prepare {
 		return fmt.Sprintf("%s.%s = ?", table, q.field), []any{q.value}, nil
 	}
