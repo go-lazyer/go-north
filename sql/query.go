@@ -10,26 +10,40 @@ type Query interface {
 }
 
 type NullQuery struct {
+	table string
 	field string
 }
 
 func NewNullQuery(field string) *NullQuery {
 	return &NullQuery{field: field}
 }
+func NewNullQueryWithTable(table, field string) *NullQuery {
+	return &NullQuery{table: table, field: field}
+}
 
 func (q *NullQuery) Source(table string, prepare bool) (string, []any, error) {
+	if q.table != "" {
+		table = q.table
+	}
 	return table + "." + q.field + " is null", nil, nil
 }
 
 type NotNullQuery struct {
+	table string
 	field string
 }
 
 func NewNotNullQuery(field string) *NotNullQuery {
 	return &NotNullQuery{field: field}
 }
+func NewNotNullQueryWithTable(table, field string) *NotNullQuery {
+	return &NotNullQuery{table: table, field: field}
+}
 
 func (q *NotNullQuery) Source(table string, prepare bool) (string, []any, error) {
+	if q.table != "" {
+		table = q.table
+	}
 	return table + "." + q.field + " is not null", nil, nil
 }
 
