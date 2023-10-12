@@ -302,139 +302,85 @@ func (s *Generator) InsertSql(prepare bool) (string, []any, error) {
 	if s.tableName == "" {
 		return "", nil, errors.New("tableName  cannot be empty")
 	}
-	if s.insert == nil || len(s.insert) == 0 {
-		return "", nil, errors.New("The insert  cannot be empty")
-	}
-	//把所有要修改的字段提取出来
+	n := 0
+	params := make([]any, 0)
 	fields := make([]string, 0)
-	for field, _ := range s.insert {
-		fields = append(fields, field)
-	}
-
 	var sql bytes.Buffer
 	sql.WriteString("insert into `" + s.tableName + "` ")
 	sql.WriteString("(")
-	n := 0
+	if s.inserts != nil && len(s.inserts) > 0 {
+		//把所有要修改的字段提取出来
 
-	for _, field := range fields {
-		if n != 0 {
-			sql.WriteString(",")
+		for field, _ := range s.inserts[0] {
+			fields = append(fields, field)
 		}
-		sql.WriteString(" " + field + " ")
-		n++
-	}
-	sql.WriteString(") values")
-	n = 0
-	params := make([]any, 0)
-	sql.WriteString("(")
-	m := 0
-	for _, field := range fields {
-		if m != 0 {
-			sql.WriteString(",")
-		}
-		params = append(params, s.insert[field])
-		if prepare {
-			sql.WriteString(" ? ")
-		} else {
-			sql.WriteString(fmt.Sprintf(" '%v' ", s.insert[field]))
-		}
-		m++
-	}
-	sql.WriteString(")")
-	return sql.String(), params, nil
-}
-func (s *Generator) InsertsSql(prepare bool) (string, []any, error) {
 
-	if s.tableName == "" {
-		return "", nil, errors.New("tableName  cannot be empty")
-	}
-	if s.inserts == nil || len(s.inserts) == 0 {
-		return "", nil, errors.New("The inserts  cannot be empty")
-	}
-	//把所有要修改的字段提取出来
-	fields := make([]string, 0)
-	for field, _ := range s.inserts[0] {
-		fields = append(fields, field)
-	}
-	var sql bytes.Buffer
-	sql.WriteString("insert into `" + s.tableName + "` ")
-	sql.WriteString("(")
-	n := 0
+		for _, field := range fields {
+			if n != 0 {
+				sql.WriteString(",")
+			}
+			sql.WriteString(" " + field + " ")
+			n++
+		}
+		sql.WriteString(") values")
+		n = 0
 
-	for _, field := range fields {
-		if n != 0 {
-			sql.WriteString(",")
+		for _, maps := range s.inserts {
+			if n != 0 {
+				sql.WriteString(",")
+			}
+			sql.WriteString("(")
+			m := 0
+			for _, field := range fields {
+				if m != 0 {
+					sql.WriteString(",")
+				}
+				params = append(params, maps[field])
+				if prepare {
+					sql.WriteString(" ? ")
+				} else {
+					sql.WriteString(fmt.Sprintf(" '%v' ", maps[field]))
+				}
+				m++
+			}
+			sql.WriteString(")")
+			n++
 		}
-		sql.WriteString(" " + field + " ")
-		n++
-	}
-	sql.WriteString(") values")
-	n = 0
-	params := make([]any, 0)
-	for _, maps := range s.inserts {
-		if n != 0 {
-			sql.WriteString(",")
+	} else {
+		for field, _ := range s.insert {
+			fields = append(fields, field)
 		}
+		for _, field := range fields {
+			if n != 0 {
+				sql.WriteString(",")
+			}
+			sql.WriteString(" " + field + " ")
+			n++
+		}
+		sql.WriteString(") values")
+		n = 0
+		params := make([]any, 0)
 		sql.WriteString("(")
 		m := 0
 		for _, field := range fields {
 			if m != 0 {
 				sql.WriteString(",")
 			}
-			params = append(params, maps[field])
+			params = append(params, s.insert[field])
 			if prepare {
 				sql.WriteString(" ? ")
 			} else {
-				sql.WriteString(fmt.Sprintf(" '%v' ", maps[field]))
+				sql.WriteString(fmt.Sprintf(" '%v' ", s.insert[field]))
 			}
 			m++
 		}
 		sql.WriteString(")")
-		n++
 	}
+
 	return sql.String(), params, nil
 }
 
 func (s *Generator) UpdateSql(prepare bool) (string, []any, error) {
-	if s.tableName == "" {
-		return "", nil, errors.New("tableName i cannot be empty")
-	}
-	if s.update == nil || len(s.update) <= 0 {
-		return "", nil, errors.New("update  cannot be empty")
-	}
-	params := make([]any, 0, 10)
-	var sql bytes.Buffer
-	sql.WriteString("update `" + s.tableName + "` set ")
-
-	n := 0
-	for name, value := range s.update {
-		if n != 0 {
-			sql.WriteString(",")
-		}
-		if prepare {
-			sql.WriteString(fmt.Sprintf("%v=?", name))
-		} else {
-			sql.WriteString(fmt.Sprintf("%v='%v'", name, value))
-		}
-		params = append(params, value)
-		n++
-	}
-	if s.querys != nil && len(s.querys) > 0 {
-		sql.WriteString(" where   ")
-		for i, query := range s.querys {
-			if i != 0 {
-				sql.WriteString(" or ")
-			}
-			source, param, _ := query.Source(s.tableName, prepare)
-			sql.WriteString(" " + source + " ")
-			params = append(params, param...)
-		}
-	}
-
-	return sql.String(), params, nil
-}
-
-func (s *Generator) UpdatesSql(prepare bool) (string, []any, error) {
 
 	if s.tableName == "" {
 		return "", nil, errors.New("tableName  cannot be empty")
@@ -447,42 +393,55 @@ func (s *Generator) UpdatesSql(prepare bool) (string, []any, error) {
 		return "", nil, errors.New("the querys size must be 1")
 	}
 
-	if s.updates == nil || len(s.updates) <= 0 {
-		return "", nil, errors.New("batchSet cannot be empty")
-	}
 	params := make([]any, 0, 10)
 	var sql bytes.Buffer
 	sql.WriteString("update `" + s.tableName + "` set ")
-
-	//把所有要修改的字段提取出来
-	fields := make(map[string]string)
-	for _, setMap := range s.updates {
-		for name, _ := range setMap {
-			fields[name] = ""
-		}
-	}
 	n := 0
-	for field, _ := range fields {
-		if n != 0 {
-			sql.WriteString(",")
+	if s.updates != nil && len(s.updates) > 0 { //批量更新
+		//把所有要修改的字段提取出来
+		fields := make(map[string]string)
+		for _, setMap := range s.updates {
+			for name, _ := range setMap {
+				fields[name] = ""
+			}
 		}
-		sql.WriteString(fmt.Sprintf("%v = CASE %v", field, s.primary))
-		for id, setMap := range s.updates {
-			v, ok := setMap[field]
-			if !ok {
-				continue
-			}
-			params = append(params, id, v)
-			if prepare {
-				sql.WriteString(" WHEN ? THEN ?")
-			} else {
-				sql.WriteString(fmt.Sprintf(" WHEN '%v' THEN '%v'", id, v))
-			}
 
+		for field, _ := range fields {
+			if n != 0 {
+				sql.WriteString(",")
+			}
+			sql.WriteString(fmt.Sprintf("%v = CASE %v", field, s.primary))
+			for id, setMap := range s.updates {
+				v, ok := setMap[field]
+				if !ok {
+					continue
+				}
+				params = append(params, id, v)
+				if prepare {
+					sql.WriteString(" WHEN ? THEN ?")
+				} else {
+					sql.WriteString(fmt.Sprintf(" WHEN '%v' THEN '%v'", id, v))
+				}
+
+			}
+			sql.WriteString(" END ")
+			n++
 		}
-		sql.WriteString(" END ")
-		n++
+	} else { //单个更新
+		for name, value := range s.update {
+			if n != 0 {
+				sql.WriteString(",")
+			}
+			if prepare {
+				sql.WriteString(fmt.Sprintf("%v=?", name))
+			} else {
+				sql.WriteString(fmt.Sprintf("%v='%v'", name, value))
+			}
+			params = append(params, value)
+			n++
+		}
 	}
+
 	source, param, _ := s.querys[0].Source(s.tableName, prepare)
 	sql.WriteString("where " + source + " ")
 	params = append(params, param...)

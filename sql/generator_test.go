@@ -122,7 +122,7 @@ func TestGenerator_UpdatesSql(t *testing.T) {
 	}
 	query := NewInQuery("dwid", dwids)
 	gen := NewGenerator().Table("user").Where(query).Primary("dwid").Updates(set)
-	fmt.Print(gen.UpdatesSql(false))
+	fmt.Print(gen.UpdateSql(false))
 }
 
 func TestGenerator_InsertsSql(t *testing.T) {
@@ -148,7 +148,7 @@ func TestGenerator_InsertsSql(t *testing.T) {
 		f1, f2, f3,
 	}
 	gen := NewGenerator().Table("user").Inserts(dwids)
-	fmt.Print(gen.InsertsSql(false))
+	fmt.Print(gen.InsertSql(false))
 }
 
 func TestGenerator_InsertSql(t *testing.T) {

@@ -115,7 +115,7 @@ set := map[string]any{
   "name": "lazyer",
 }
 
-gen := NewGenerator().Table("user").Where(query).Set(set)
+gen := NewGenerator().Table("user").Where(query).Update(set)
 
 fmt.Println(gen.UpdateSql(false))
 ```

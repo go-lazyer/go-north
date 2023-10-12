@@ -406,24 +406,6 @@ func getViewTemplate() string {
 			views = append(views, *ConvertExtend(&extend))
 		}
 		return views
-	}
-	func ConvertToMap(m *model.{{.TableNameUpperCamel}}Model) map[string]any {
-		view := make(map[string]any)
-		{{range $field := .Fields}}
-			if m.{{ .FieldName }}.Valid {
-				view[model.{{- .ColumnNameUpper -}}] = m.{{ .FieldName }}.{{ .FieldNullTypeValue}}
-			} else {
-				view[model.{{- .ColumnNameUpper -}}] = nil
-			}
-		{{end}}
-		return view
-	}
-	func ConvertsToMap(models []model.{{.TableNameUpperCamel}}Model) []map[string]any {
-		views := make([]map[string]any, 0, len(models))
-		for _, model := range models {
-			views = append(views, ConvertToMap(&model))
-		}
-		return views
 	}`
 }
 func getServiceTemplate() string {
@@ -496,80 +478,16 @@ func getModelTemplate() string {
 		{{end}}
 	}
 	
-	func (m *{{.TableNameUpperCamel}}Model) format(format string, includeEmpty bool) (string, []any) {
-		params := make([]any, 0)
-		var sql bytes.Buffer
-
-		{{$n := -1}}
-        {{range $i,$field := .Fields}}
-            if m.{{$field.FieldName}}.Valid {
-                sql.WriteString({{if ne $i  0}}","+{{end}}fmt.Sprintf(format,"{{$field.ColumnName}}"))
-                params = append(params, m.{{$field.FieldName}}.{{.FieldNullTypeValue}})
-            } else if includeEmpty {
-                sql.WriteString({{if ne $i  0}}","+{{end}}fmt.Sprintf(format,"{{$field.ColumnName}}"))
-                params = append(params, {{if .ColumnDefault.Valid}}"{{.ColumnDefault.String}}"{{else}}nil{{end}})
-            }
-        {{end}}
-		return sql.String(), params
-	}
-	func (m *{{.TableNameUpperCamel}}Model) UpdateSql() (string, []any, error) {
+	func (m *{{.TableNameUpperCamel}}Model) ToMap(includeEmpty bool) map[string]any {
+		view := make(map[string]any)
 		{{range $field := .Fields}}
-			{{if eq .IsPrimaryKey 1}}
-			if !m.{{ .FieldName }}.Valid {
-				return "", nil, errors.New("{{ .FieldName }} is not null")
-		}{{end}}{{end}}
-
-		str, params := m.format("` + " `%v`" + ` = ?", true)
-		var sql bytes.Buffer
-		sql.WriteString(fmt.Sprintf("update ` + "`{{.TableName}}`" + ` set %v", str))
-	
-		sql.WriteString(" where  {{range $i,$field := .Fields}}{{if eq $field.IsPrimaryKey 1}}{{if ne $n  -1}} and {{end}}{{$n = $i}}` + "`{{$field.ColumnName}}`" + ` = ?{{end}}{{end}} "){{$n = -1}}
-		params = append(params {{range $i,$field := .Fields}}{{if eq $field.IsPrimaryKey 1}},m.{{$field.FieldName}}.{{.FieldNullTypeValue}}{{end}}{{end}})
-		return sql.String(), params, nil
-	}
-	
-	func (m *{{.TableNameUpperCamel}}Model) UpdateSqlBySelective() (string, []any, error) {
-		{{range $field := .Fields}}{{if eq .IsPrimaryKey 1}} if !m.{{ .FieldName }}.Valid {
-			return "", nil, errors.New("{{ .FieldName }} is not null")
-		}{{end}}
-		{{end}}
-	
-		str, params := m.format("` + " `%v`" + ` = ?", false)
-		var sql bytes.Buffer
-		sql.WriteString(fmt.Sprintf("update ` + "`{{.TableName}}`" + ` set %v", str))
-		
-		{{$n = -1}}
-		sql.WriteString(" where  {{range $i,$field := .PrimaryKeyFields}}{{if ne $n  -1}} and {{end}}{{$n = $i}}` + "`{{$field.ColumnName}}`" + ` = ?{{end}} ")
-		
-		{{$n = -1}}
-		params = append(params {{range $i,$field := .PrimaryKeyFields}},m.{{$field.FieldName}}.{{.FieldNullTypeValue}}{{end}})
-		return sql.String(), params, nil
-	}
-	
-	func (m *{{.TableNameUpperCamel}}Model) InsertSql() (string, []any, error) {
-		str, params := m.format("` + " `%v`" + `", true)
-		var sql bytes.Buffer
-		sql.WriteString(fmt.Sprintf("insert into ` + "`{{.TableName}}`" + ` (%v) values (", str))
-		
-		for i := 0; i < len(params); i++ {
-			if i == 0 {
-				sql.WriteString(" ? ")
-			} else {
-				sql.WriteString(",? ")
+			if m.{{ .FieldName }}.Valid {
+				view[model.{{- .ColumnNameUpper -}}] = m.{{ .FieldName }}.{{ .FieldNullTypeValue}}
+			} else if includeEmpty {
+				view[model.{{- .ColumnNameUpper -}}] = nil
 			}
-		}
-		sql.WriteString(")")
-		
-		return sql.String(), params, nil
-	}
-
-	func (m *{{.TableNameUpperCamel}}Model) SaveSql() (string, []any, error) {
-		insertStr, params, _ := m.InsertSql()
-		var sql bytes.Buffer
-		updateStr, updateParams := m.format(" ` + " `%v`" + ` = ?", true)
-		sql.WriteString(fmt.Sprintf("%v on duplicate key update %v", insertStr, updateStr))
-		params = append(params, updateParams...)
-		return sql.String(), params, nil
+		{{end}}
+		return view
 	}`
 }
 func getExtendTemplate() string {
@@ -792,21 +710,7 @@ func getDaoTemplate() string {
 				return id, nil
 			}
 
-			func Update({{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model) (int64, error) {
-				sqlStr, param, err := {{.TableNameLowerCamel}}.UpdateSql()
-				if err != nil {
-					return 0,err
-				}
-				return UpdateBySql(sqlStr, param)
-			}
-			func UpdateBySelective({{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model) (int64, error) {
-				sqlStr, param, err := {{.TableNameLowerCamel}}.UpdateSqlBySelective()
-				if err != nil {
-					err = errors.WithStack(err)
-					return 0,err
-				}
-				return UpdateBySql(sqlStr, param)
-			}
+			
 			func UpdateByGen(gen *generator.Generator) (int64, error) {
 				sqlStr, params, err := gen.UpdateSql(true)
 				if err != nil {
@@ -824,49 +728,18 @@ func getDaoTemplate() string {
 				return count, nil
 			}
 			//batch update
-			func Updates(maps map[any]map[string]any) (int64, error) {
-				gen := generator.NewGenerator().Table(model.TABLE_NAME).Updates(maps)
-				sqlStr, params, err := gen.UpdatesSql(true)
+			func UpdateByMaps(updateMaps map[any]map[string]any) (int64, error) {
+
+				query := generator.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, maps.Keys(updateMaps))
+				gen := generator.NewGenerator().Primary(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}).Table(model.TABLE_NAME).Where(query).Updates(updateMaps)
+				sqlStr, params, err := gen.UpdateSql(true)
 				if err != nil {
 					return 0, errors.WithStack(err)
 				}
 				return UpdatesBySql(sqlStr, params)
 			}
 
-			//batch update
-			func UpdatesByGen(gen *generator.Generator) (int64, error) {
-				sqlStr, params, err := gen.UpdatesSql(true)
-				if err != nil {
-					return 0, errors.WithStack(err)
-				}
-				return UpdatesBySql(sqlStr, params)
-			}
-
-			//batch update
-			func UpdatesBySql(sqlStr string, params []any) (int64, error) {
-				id, err := dbutil.PrepareUpdate(sqlStr, params, getDatabase())
-				if err != nil {
-					return 0, errors.WithStack(err)
-				}
-				return id, nil
-			}
-			func Save({{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model) (int64, error) {
-				sqlStr, params, err := {{.TableNameLowerCamel}}.SaveSql()
-				if err != nil {
-					err = errors.WithStack(err)
-					return 0, err
-				}
-				return SaveBySql(sqlStr, params)
-			}
 			
-			func SaveBySql(sqlStr string, params []any) (int64, error) {
-				id, err := dbutil.PrepareSave(sqlStr, params, getDatabase())
-				if err != nil {
-					err = errors.WithStack(err)
-					return 0, err
-				}
-				return id, nil
-			}
 			{{ if gt (len .PrimaryKeyFields) 0 -}}
 			func DeleteByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (int64, error) {
 				{{ if eq (len .PrimaryKeyFields) 1 -}} 
