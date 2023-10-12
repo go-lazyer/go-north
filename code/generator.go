@@ -678,7 +678,7 @@ func getDaoTemplate() string {
 			//batch insert
 			func InsertMaps(insertMaps []map[string]any) (int64, error) {
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Inserts(insertMaps)
-				sqlStr, params, err := gen.InsertsSql(true)
+				sqlStr, params, err := gen.InsertSql(true)
 				if err != nil {
 					return 0, errors.WithStack(err)
 				}
