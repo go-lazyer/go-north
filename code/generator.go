@@ -509,6 +509,7 @@ func getDaoTemplate() string {
 				"database/sql"
 				"fmt"
 				"github.com/pkg/errors"
+				"golang.org/x/exp/maps"
 			)
 			func getDatabase() *sql.DB {
 				var database *sql.DB
@@ -655,14 +656,6 @@ func getDaoTemplate() string {
 				return {{.TableNameLowerCamel}}Extends,nil
 			}
 
-			func Insert({{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model) (int64, error) {
-				sqlStr, params, err := {{.TableNameLowerCamel}}.InsertSql()
-				if err != nil {
-					err = errors.WithStack(err)
-					return 0,err
-				}
-				return InsertBySql(sqlStr, params)
-			}
 			
 			func InsertByGen(gen *generator.Generator) (int64, error) {
 				sqlStr, params, err := gen.InsertSql(true)
@@ -683,33 +676,14 @@ func getDaoTemplate() string {
 			}
 
 			//batch insert
-			func Inserts(maps []map[string]any) (int64, error) {
-				gen := generator.NewGenerator().Table(model.TABLE_NAME).Inserts(maps)
+			func InsertMaps(insertMaps []map[string]any) (int64, error) {
+				gen := generator.NewGenerator().Table(model.TABLE_NAME).Inserts(insertMaps)
 				sqlStr, params, err := gen.InsertsSql(true)
 				if err != nil {
 					return 0, errors.WithStack(err)
 				}
-				return InsertsBySql(sqlStr, params)
+				return InsertBySql(sqlStr, params)
 			}
-
-			//batch insert
-			func InsertsByGen(gen *generator.Generator) (int64, error) {
-				sqlStr, params, err := gen.InsertsSql(true)
-				if err != nil {
-					return 0, errors.WithStack(err)
-				}
-				return InsertsBySql(sqlStr, params)
-			}
-
-			//batch insert
-			func InsertsBySql(sqlStr string, params []any) (int64, error) {
-				id, err := dbutil.PrepareInsert(sqlStr, params, getDatabase())
-				if err != nil {
-					return 0, errors.WithStack(err)
-				}
-				return id, nil
-			}
-
 			
 			func UpdateByGen(gen *generator.Generator) (int64, error) {
 				sqlStr, params, err := gen.UpdateSql(true)
@@ -736,7 +710,7 @@ func getDaoTemplate() string {
 				if err != nil {
 					return 0, errors.WithStack(err)
 				}
-				return UpdatesBySql(sqlStr, params)
+				return UpdateBySql(sqlStr, params)
 			}
 
 			
