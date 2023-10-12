@@ -278,8 +278,8 @@ func (s *Generator) DeleteSql(prepare bool) (string, []any, error) {
 	if s.tableName == "" {
 		return "", nil, errors.New("tableName cannot be empty")
 	}
-	if s.querys == nil || len(s.querys) == 0 {
-		return "", nil, errors.New("warn: query cannot be empty")
+	if s.querys == nil || len(s.querys) != 1 {
+		return "", nil, errors.New("the querys size must be 1")
 	}
 	params := make([]any, 0, 10)
 	var sql bytes.Buffer

@@ -482,9 +482,9 @@ func getModelTemplate() string {
 		view := make(map[string]any)
 		{{range $field := .Fields}}
 			if m.{{ .FieldName }}.Valid {
-				view[model.{{- .ColumnNameUpper -}}] = m.{{ .FieldName }}.{{ .FieldNullTypeValue}}
+				view[{{- .ColumnNameUpper -}}] = m.{{ .FieldName }}.{{ .FieldNullTypeValue}}
 			} else if includeEmpty {
-				view[model.{{- .ColumnNameUpper -}}] = nil
+				view[{{- .ColumnNameUpper -}}] = nil
 			}
 		{{end}}
 		return view
