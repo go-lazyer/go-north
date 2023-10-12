@@ -460,10 +460,7 @@ func getModelTemplate() string {
 	package model
 	
 	import (
-		"bytes"
 		"database/sql"
-		"errors"
-		"fmt"
 	)
 	
 	const (
@@ -676,7 +673,7 @@ func getDaoTemplate() string {
 			}
 
 			//batch insert
-			func InsertMaps(insertMaps []map[string]any) (int64, error) {
+			func InsertByMaps(insertMaps []map[string]any) (int64, error) {
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Inserts(insertMaps)
 				sqlStr, params, err := gen.InsertSql(true)
 				if err != nil {
