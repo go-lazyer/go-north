@@ -385,9 +385,6 @@ func (s *Generator) UpdateSql(prepare bool) (string, []any, error) {
 	if s.tableName == "" {
 		return "", nil, errors.New("tableName  cannot be empty")
 	}
-	if s.primary == "" {
-		return "", nil, errors.New("primary cannot be empty")
-	}
 
 	if s.querys == nil || len(s.querys) != 1 {
 		return "", nil, errors.New("the querys size must be 1")
@@ -398,6 +395,11 @@ func (s *Generator) UpdateSql(prepare bool) (string, []any, error) {
 	sql.WriteString("update `" + s.tableName + "` set ")
 	n := 0
 	if s.updates != nil && len(s.updates) > 0 { //批量更新
+
+		if s.primary == "" {
+			return "", nil, errors.New("primary cannot be empty")
+		}
+
 		//把所有要修改的字段提取出来
 		fields := make(map[string]string)
 		for _, setMap := range s.updates {
