@@ -543,13 +543,13 @@ func getDaoTemplate() string {
 			}
 			// query first by sql
 			func QueryFirstBySql(sqlStr string, params []any) (*model.{{.TableNameUpperCamel}}Model, error) {
-				var {{.TableNameLowerCamel}} *model.{{.TableNameUpperCamel}}Model
-				err := dbutil.PrepareFirst(sqlStr, params, {{.TableNameLowerCamel}},getDatabase())
-				if err != nil {
+				models, err := QueryBySql(sqlStr, params)
+
+				if models == nil || len(models) == 0 || err != nil {
 					err = errors.WithStack(err)
-					return nil,err
+					return nil, err
 				}
-				return {{.TableNameLowerCamel}},nil
+				return &(models[0]), nil
 			}
 			{{if eq (len .PrimaryKeyFields) 1}} 
 			// query map by primaryKeys

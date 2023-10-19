@@ -59,28 +59,6 @@ func PrepareCount(sql string, params []any, db *sql.DB) (int64, error) {
 	}
 	return count, nil
 }
-func PrepareFirst(sql string, params []any, structs any, db *sql.DB) error {
-	serverMode := os.Getenv("sql.log")
-	if serverMode == "stdout" {
-		fmt.Printf("sql is %v\n", sql)
-		fmt.Printf("params is %v\n", params)
-	}
-	stmt, err := db.Prepare(sql)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	rows, err := stmt.Query(params...)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	err = RowsToStruct(rows, structs)
-	if err != nil {
-		return err
-	}
-	return nil
-}
 
 // 普通查询
 func Query(sql string, params []any, results any, db *sql.DB) error {
@@ -294,22 +272,6 @@ func RowsToStructs(rows *sql.Rows, results any) (err error) {
 	}
 	reflect.Indirect(reflect.ValueOf(results)).Set(strusRV)
 	return nil
-}
-func RowsToStruct(rows *sql.Rows, result any) (err error) {
-	struRT := reflect.TypeOf(result).Elem()
-
-	strusPtrRV := reflect.New(reflect.SliceOf(struRT))
-	err = RowsToStructs(rows, result)
-	if err != nil {
-		return err
-	}
-	strusRV := reflect.Indirect(strusPtrRV)
-	if strusRV.Len() == 0 {
-		return
-	}
-	v := reflect.Indirect(reflect.ValueOf(result))
-	v.Set(strusRV.Index(0))
-	return
 }
 func RowsToCnts(rows *sql.Rows, cnts any) (err error) {
 	cntsRV := reflect.Indirect(reflect.ValueOf(cnts))
