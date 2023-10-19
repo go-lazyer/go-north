@@ -82,7 +82,7 @@ func PrepareFirst(sql string, params []any, structs any, db *sql.DB) error {
 	return nil
 }
 
-//普通查询
+// 普通查询
 func Query(sql string, params []any, results any, db *sql.DB) error {
 	if db == nil {
 		return errors.New("db not allowed to be nil,need to instantiate yourself")
@@ -104,7 +104,7 @@ func Query(sql string, params []any, results any, db *sql.DB) error {
 	return nil
 }
 
-//预处理查询
+// 预处理查询
 func PrepareQuery(sql string, params []any, results any, db *sql.DB) error {
 	if db == nil {
 		return errors.New("db not allowed to be nil,need to instantiate yourself")
@@ -299,7 +299,7 @@ func RowsToStruct(rows *sql.Rows, result any) (err error) {
 	struRT := reflect.TypeOf(result).Elem()
 
 	strusPtrRV := reflect.New(reflect.SliceOf(struRT))
-	err = RowsToStructs(rows, strusPtrRV.Interface())
+	err = RowsToStructs(rows, result)
 	if err != nil {
 		return err
 	}
@@ -307,7 +307,8 @@ func RowsToStruct(rows *sql.Rows, result any) (err error) {
 	if strusRV.Len() == 0 {
 		return
 	}
-	reflect.Indirect(reflect.ValueOf(result)).Set(strusRV.Index(0))
+	v := reflect.Indirect(reflect.ValueOf(result))
+	v.Set(strusRV.Index(0))
 	return
 }
 func RowsToCnts(rows *sql.Rows, cnts any) (err error) {
