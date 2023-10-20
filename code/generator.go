@@ -684,9 +684,9 @@ func getDaoTemplate() string {
 			{{ if gt (len .PrimaryKeyFields) 0 -}}
 			func Update(m *model.{{.TableNameUpperCamel}}Model) (int64, error) {
 				{{ if eq (len .PrimaryKeyFields) 1 -}} 
-				query := generator.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}})
+				query := generator.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, m.{{(index .PrimaryKeyFields 0).FieldName}}.{{(index .PrimaryKeyFields 0).FieldNullTypeValue}})
 				{{ else -}}
-				query := generator.NewBoolQuery(){{range $field := .PrimaryKeyFields}} .And(generator.NewEqualQuery(model.{{ .ColumnNameUpper }}, {{ .ColumnNameLowerCamel }})) {{end}}
+				query := generator.NewBoolQuery(){{range $field := .PrimaryKeyFields}} .And(generator.NewEqualQuery(model.{{ .ColumnNameUpper }}, m.{{.FieldName}}.{{.FieldNullTypeValue}})) {{end}}
 				{{end}}
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Update(m.ToMap(false)).Where(query)
 				return UpdateByGen(gen)
