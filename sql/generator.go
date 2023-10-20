@@ -445,7 +445,7 @@ func (s *Generator) UpdateSql(prepare bool) (string, []any, error) {
 	}
 
 	source, param, _ := s.querys[0].Source(s.tableName, prepare)
-	sql.WriteString("where " + source + " ")
+	sql.WriteString(" where " + source + " ")
 	params = append(params, param...)
 
 	return sql.String(), params, nil

@@ -120,7 +120,7 @@ gen := NewGenerator().Table("user").Where(query).Update(set)
 fmt.Println(gen.UpdateSql(false))
 ```
 
-7. 批量更新
+7. 批量更新(只支持主键更新)
 
 ```go
 // update `user`
@@ -172,7 +172,7 @@ query := NewInQuery("dwid", dwids)
 
 gen := NewGenerator().Table("user").Where(query).Primary("dwid").Updates(set)
 
-fmt.Print(gen.UpdatesSql(false))
+fmt.Print(gen.UpdateSql(false))
 ```
 
 8. 批量插入
