@@ -519,11 +519,11 @@ func getDaoTemplate() string {
 			// query first by primaryKey
 			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
 				{{ if eq (len .PrimaryKeyFields) 1 -}} 
-				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}}))
+				query := generator.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}})
 				{{ else -}}
 				query := generator.NewBoolQuery(){{range $field := .PrimaryKeyFields}} .And(generator.NewEqualQuery(model.{{ .ColumnNameUpper }}, {{ .ColumnNameLowerCamel }})) {{end}}
+				{{end}}
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(query)
-				{{ end -}}
 				sqlStr, params, err := gen.SelectSql(true)
 				if err != nil {
 					err = errors.WithStack(err)
@@ -681,7 +681,17 @@ func getDaoTemplate() string {
 				}
 				return InsertBySql(sqlStr, params)
 			}
-			
+			{{ if gt (len .PrimaryKeyFields) 0 -}}
+			func Update(m *model.{{.TableNameUpperCamel}}Model) (int64, error) {
+				{{ if eq (len .PrimaryKeyFields) 1 -}} 
+				query := generator.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}})
+				{{ else -}}
+				query := generator.NewBoolQuery(){{range $field := .PrimaryKeyFields}} .And(generator.NewEqualQuery(model.{{ .ColumnNameUpper }}, {{ .ColumnNameLowerCamel }})) {{end}}
+				{{end}}
+				gen := generator.NewGenerator().Table(model.TABLE_NAME).Update(m.ToMap(false)).Where(query)
+				return UpdateByGen(gen)
+			}
+			{{end}}
 			func UpdateByGen(gen *generator.Generator) (int64, error) {
 				sqlStr, params, err := gen.UpdateSql(true)
 				if err != nil {
@@ -690,6 +700,7 @@ func getDaoTemplate() string {
 				}
 				return UpdateBySql(sqlStr, params)
 			}
+			
 			func UpdateBySql(sqlStr string, params []any) (int64, error) {
 				count, err := dbutil.PrepareUpdate(sqlStr, params,getDatabase())
 				if err != nil {
