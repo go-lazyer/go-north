@@ -359,7 +359,6 @@ func (s *Generator) InsertSql(prepare bool) (string, []any, error) {
 		}
 		sql.WriteString(") values")
 		n = 0
-		params := make([]any, 0)
 		sql.WriteString("(")
 		m := 0
 		for _, field := range fields {

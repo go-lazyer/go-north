@@ -653,6 +653,10 @@ func getDaoTemplate() string {
 				return {{.TableNameLowerCamel}}Extends,nil
 			}
 
+			func Insert(m *model.SUserInfoModel) (int64, error) {
+				gen := generator.NewGenerator().Table(model.TABLE_NAME).Insert(m.ToMap(false))
+				return InsertByGen(gen)
+			}
 			
 			func InsertByGen(gen *generator.Generator) (int64, error) {
 				sqlStr, params, err := gen.InsertSql(true)
@@ -687,7 +691,7 @@ func getDaoTemplate() string {
 				query := generator.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, m.{{(index .PrimaryKeyFields 0).FieldName}}.{{(index .PrimaryKeyFields 0).FieldNullTypeValue}})
 				{{ else -}}
 				query := generator.NewBoolQuery(){{range $field := .PrimaryKeyFields}} .And(generator.NewEqualQuery(model.{{ .ColumnNameUpper }}, m.{{.FieldName}}.{{.FieldNullTypeValue}})) {{end}}
-				{{end}}
+				{{end -}}
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Update(m.ToMap(false)).Where(query)
 				return UpdateByGen(gen)
 			}

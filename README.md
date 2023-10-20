@@ -18,7 +18,7 @@ go-generator 分为两个模块，sql-generator（生成sql）和code-gengrator(
 
 sql-generator 可以生成普通sql和预处理sql，配合golang官方提供的sql.DB,可以轻松实现增删改查.
 
-1. 引入
+#### 1、引入
 
 ```go
 import generator "github.com/go-lazyer/go-generator/sql"
@@ -26,7 +26,8 @@ import generator "github.com/go-lazyer/go-generator/sql"
 
 
 
-1.   统计
+#### 2、统计
+
 ``` go
 //select count(1) count from user where t.id>1000
 
@@ -37,7 +38,7 @@ gen := generator.NewGenerator().Table("user").Where(query)
 fmt.Println(gen.CountSql(false))
   
 ```
-2. 基础查询
+#### 3、基础查询
 
 ```go
 //select * from user
@@ -55,7 +56,7 @@ gen := NewGenerator().Table("user").Where(query)
 fmt.Println(gen.SelectSql(false))
 ```
 
-3. 排序查询
+#### 4、排序查询
 
 ```go
 // select * from user where id=1000 and age>20 order by age desc,id asc
@@ -71,7 +72,7 @@ gen := NewGenerator().Table("user").Where(boolQuery).AddOrderBy("age", "desc").A
 fmt.Println(gen.SelectSql(false))
 ```
 
-4. 复杂查询
+#### 5、复杂查询
 
 ```go
 // select id,name,age from user where (id=1000 and age>20) or age <=10 order by age desc
@@ -89,7 +90,7 @@ gen := NewGenerator().Result("id", "name", "age").Table("user").Where(boolQuery,
 fmt.Println(gen.SelectSql(false))
 ```
 
-5. 联表查询
+#### 6、联表查询
 
  ```go
  // select user.id,order.id  from user join order on user.id=order.user_id where user.id='10000'
@@ -103,7 +104,7 @@ fmt.Println(gen.SelectSql(false))
  fmt.Println(gen.SelectSql(false))
  ```
 
-6. 更新
+#### 7、更新
 
 ```go
 // update user set age=21,name="lazeyr" where id="10000"	
@@ -120,7 +121,7 @@ gen := NewGenerator().Table("user").Where(query).Update(set)
 fmt.Println(gen.UpdateSql(false))
 ```
 
-7. 批量更新(只支持主键更新)
+#### 8、批量更新(只支持主键更新)
 
 ```go
 // update `user`
@@ -175,7 +176,24 @@ gen := NewGenerator().Table("user").Where(query).Primary("dwid").Updates(set)
 fmt.Print(gen.UpdateSql(false))
 ```
 
-8. 批量插入
+#### 9、单条插入
+
+```go
+// insert into `user` ( age , name , sex ) values ( '10' , 'lilie' , 'boy' ),
+
+query := NewEqualQuery("id", 1000)
+
+set := map[string]any{
+  "age":  21,
+  "name": "lazyer",
+}
+
+gen := NewGenerator().Table("user").Where(query).Update(set)
+
+fmt.Println(gen.UpdateSql(false))
+```
+
+#### 10、批量插入
 
 ```go
 //insert into `user` ( age , name , sex ) 
