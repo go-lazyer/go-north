@@ -653,7 +653,7 @@ func getDaoTemplate() string {
 				return {{.TableNameLowerCamel}}Extends,nil
 			}
 
-			func Insert(m *model.SUserInfoModel) (int64, error) {
+			func Insert(m *model.{{.TableNameUpperCamel}}Model) (int64, error) {
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Insert(m.ToMap(false))
 				return InsertByGen(gen)
 			}

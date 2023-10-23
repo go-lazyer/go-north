@@ -181,14 +181,13 @@ fmt.Print(gen.UpdateSql(false))
 ```go
 // insert into `user` ( age , name , sex ) values ( '10' , 'lilie' , 'boy' ),
 
-query := NewEqualQuery("id", 1000)
-
-set := map[string]any{
-  "age":  21,
-  "name": "lazyer",
+m := map[string]any{
+  "name": "lilie",
+  "sex":  "boy",
+  "age":  "10",
 }
 
-gen := NewGenerator().Table("user").Where(query).Update(set)
+gen := generator.NewGenerator().Table(model.TABLE_NAME).Insert(m)
 
 fmt.Println(gen.UpdateSql(false))
 ```
