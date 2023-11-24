@@ -713,10 +713,21 @@ func getDaoTemplate() string {
 				}
 				return count, nil
 			}
-			//batch update
-			func UpdateByMaps(updateMaps map[any]map[string]any) (int64, error) {
-
-				query := generator.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, maps.Keys(updateMaps))
+			// 批量更新，updateMaps中必须包含主键，联合主键的表不适应该方法
+			func UpdateByMaps(updateMaps []map[string]any) (int64, error) {
+				if updateMaps == nil || len(updateMaps) == 0 {
+					return 0, nil
+				}
+				ids := make([]any, 0)
+				for _, updateMap := range updateMaps {
+					if value, ok := updateMap[model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}]; ok {
+						ids = append(ids, value)
+					}
+				}
+				if ids == nil || len(ids) == 0 {
+					return 0, errors.New("batch update primary not allowed to be nil")
+				}
+				query := generator.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, ids)
 				gen := generator.NewGenerator().Primary(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}).Table(model.TABLE_NAME).Where(query).Updates(updateMaps)
 				sqlStr, params, err := gen.UpdateSql(true)
 				if err != nil {
