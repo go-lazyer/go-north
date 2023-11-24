@@ -506,7 +506,6 @@ func getDaoTemplate() string {
 				"database/sql"
 				"fmt"
 				"github.com/pkg/errors"
-				"golang.org/x/exp/maps"
 			)
 			func getDatabase() *sql.DB {
 				var database *sql.DB
