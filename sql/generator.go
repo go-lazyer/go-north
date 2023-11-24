@@ -21,7 +21,7 @@ type Generator struct {
 	pageNum    int
 	querys     []Query
 	update     map[string]any
-	updates    map[any]map[string]any
+	updates    []map[string]any
 	insert     map[string]any
 	inserts    []map[string]any
 	joins      []*Join
@@ -47,7 +47,7 @@ func (s *Generator) Update(m map[string]any) *Generator {
 	s.update = m
 	return s
 }
-func (s *Generator) Updates(m map[any]map[string]any) *Generator {
+func (s *Generator) Updates(m []map[string]any) *Generator {
 	s.updates = m
 	return s
 }
@@ -412,18 +412,17 @@ func (s *Generator) UpdateSql(prepare bool) (string, []any, error) {
 				sql.WriteString(",")
 			}
 			sql.WriteString(fmt.Sprintf("%v = CASE %v", field, s.primary))
-			for id, setMap := range s.updates {
+			for _, setMap := range s.updates {
 				v, ok := setMap[field]
 				if !ok {
 					continue
 				}
-				params = append(params, id, v)
+				params = append(params, setMap[s.primary], v)
 				if prepare {
 					sql.WriteString(" WHEN ? THEN ?")
 				} else {
-					sql.WriteString(fmt.Sprintf(" WHEN '%v' THEN '%v'", id, v))
+					sql.WriteString(fmt.Sprintf(" WHEN '%v' THEN '%v'", setMap[s.primary], v))
 				}
-
 			}
 			sql.WriteString(" END ")
 			n++

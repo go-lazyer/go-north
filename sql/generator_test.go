@@ -112,10 +112,8 @@ func TestGenerator_UpdatesSql(t *testing.T) {
 		"sex":  "girl",
 		"age":  "30",
 	}
-	set := map[any]map[string]any{
-		"10001": f1,
-		"10002": f2,
-		"10003": f3,
+	set := []map[string]any{
+		f1, f2, f3,
 	}
 	dwids := []any{
 		10001, 10002, 10003,
