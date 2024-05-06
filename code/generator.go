@@ -582,12 +582,13 @@ func getDaoTemplate() string {
 			
 			// query map by sql
 			func QueryMapBySql(sqlStr string, params []any) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
-				{{.TableNameLowerCamel}}s := make([]model.{{.TableNameUpperCamel}}Model, 0)
-				err := dbutil.PrepareQuery(sqlStr, params, &{{.TableNameLowerCamel}}s,getDatabase())
+				maps,err := dbutil.PrepareQuery(sqlStr, params,getDatabase())
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err
 				}
+				{{.TableNameLowerCamel}}s:= model.SliceToStructs(maps)
+
 				if {{.TableNameLowerCamel}}s == nil || len({{.TableNameLowerCamel}}s) == 0 {
 					return nil,nil
 				}
@@ -630,11 +631,12 @@ func getDaoTemplate() string {
 			// query by sql
 			func QueryBySql(sqlStr string, params []any) ([]model.{{.TableNameUpperCamel}}Model, error) {
 				{{.TableNameLowerCamel}}s := make([]model.{{.TableNameUpperCamel}}Model, 0)
-				err := dbutil.PrepareQuery(sqlStr, params, &{{.TableNameLowerCamel}}s,getDatabase())
+				maps,err := dbutil.PrepareQuery(sqlStr, params,getDatabase())
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err
 				}
+				{{.TableNameLowerCamel}}s := model.SliceToStructs(maps)
 				return {{.TableNameLowerCamel}}s,nil
 			}
 
@@ -650,12 +652,12 @@ func getDaoTemplate() string {
 			}
 			// query extend by sql
 			func QueryExtendBySql(sqlStr string, params []any) ([]model.{{.TableNameUpperCamel}}Extend, error) {
-				err := dbutil.PrepareQuery(sqlStr, params,getDatabase())
-				{{.TableNameLowerCamel}}Extends := model.SliceToExtStructs(maps)
+				maps,err := dbutil.PrepareQuery(sqlStr, params,getDatabase())
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err
 				}
+				{{.TableNameLowerCamel}}Extends := model.SliceToExtStructs(maps)
 				return {{.TableNameLowerCamel}}Extends,nil
 			}
 
