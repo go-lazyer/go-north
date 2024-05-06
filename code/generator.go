@@ -432,7 +432,19 @@ func getExtendTemplate() string {
 			type {{.TableNameUpperCamel}}Extend struct {
 				{{.TableNameUpperCamel}}Model
 			}
-			`
+
+			func MapToExtStruct(m map[string]any) {{.TableNameUpperCamel}}Extend {
+				model := {{.TableNameUpperCamel}}Extend{}
+				model.{{.TableNameUpperCamel}}Model = MapToStruct(m)
+				return model
+			}
+			func SliceToExtStructs(s []map[string]any) []{{.TableNameUpperCamel}}Extend {
+				slices := make([]{{.TableNameUpperCamel}}Extend, 0)
+				for _, m := range s {
+					slices = append(slices, MapToExtStruct(m))
+				}
+				return slices
+			}`
 }
 
 func getViewTemplate() string {
@@ -638,8 +650,8 @@ func getDaoTemplate() string {
 			}
 			// query extend by sql
 			func QueryExtendBySql(sqlStr string, params []any) ([]model.{{.TableNameUpperCamel}}Extend, error) {
-				{{.TableNameLowerCamel}}Extends := make([]model.{{.TableNameUpperCamel}}Extend, 0)
-				err := dbutil.PrepareQuery(sqlStr, params, &{{.TableNameLowerCamel}}Extends,getDatabase())
+				err := dbutil.PrepareQuery(sqlStr, params,getDatabase())
+				{{.TableNameLowerCamel}}Extends := model.SliceToExtStructs(maps)
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err

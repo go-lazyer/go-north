@@ -61,7 +61,7 @@ func PrepareCount(sql string, params []any, db *sql.DB) (int64, error) {
 }
 
 // 普通查询
-func Query(sql string, params []any, results any, db *sql.DB) ([]map[string]any, error) {
+func Query(sql string, params []any, db *sql.DB) ([]map[string]any, error) {
 	if db == nil {
 		return nil, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -79,7 +79,7 @@ func Query(sql string, params []any, results any, db *sql.DB) ([]map[string]any,
 }
 
 // 预处理查询
-func PrepareQuery(sql string, params []any, results any, db *sql.DB) ([]map[string]any, error) {
+func PrepareQuery(sql string, params []any, db *sql.DB) ([]map[string]any, error) {
 	if db == nil {
 		return nil, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
