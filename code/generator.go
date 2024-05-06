@@ -296,46 +296,46 @@ func (gen *Generator) Gen(modules []Module) error {
 func genFile(table *Module, packageName string) {
 
 	var templateStr, filePath, file string
-	if "model" == packageName {
+	if packageName == "model" {
 		templateStr = getModelTemplate()
 		filePath = table.ModelFilePath
 		file = filePath + "/" + table.ModelFileName
-	} else if "extend" == packageName {
+	} else if packageName == "extend" {
 		templateStr = getExtendTemplate()
 		filePath = table.ExtendFilePath
 		file = filePath + "/" + table.ExtendFileName
 		if IsExist(file) { //extend 不覆盖
 			return
 		}
-	} else if "view" == packageName {
+	} else if packageName == "view" {
 		templateStr = getViewTemplate()
 		filePath = table.ViewFilePath
 		file = filePath + "/" + table.ViewFileName
 		if IsExist(file) { //view 不覆盖
 			return
 		}
-	} else if "param" == packageName {
+	} else if packageName == "param" {
 		templateStr = getParamTemplate()
 		filePath = table.ParamFilePath
 		file = filePath + "/" + table.ParamFileName
 		if IsExist(file) { //param 不覆盖
 			return
 		}
-	} else if "dao" == packageName {
+	} else if packageName == "dao" {
 		templateStr = getDaoTemplate()
 		filePath = table.DaoFilePath
 		file = filePath + "/" + table.DaoFileName
 		if IsExist(file) { //dao 不覆盖
 			return
 		}
-	} else if "service" == packageName {
+	} else if packageName == "service" {
 		templateStr = getServiceTemplate()
 		filePath = table.ServiceFilePath
 		file = filePath + "/" + table.ServiceFileName
 		if IsExist(file) { //service 不覆盖
 			return
 		}
-	} else if "controller" == packageName {
+	} else if packageName == "controller" {
 		templateStr = getController()
 		filePath = table.ControllerFilePath
 		file = filePath + "/" + table.ControllerFileName
@@ -630,7 +630,6 @@ func getDaoTemplate() string {
 			}
 			// query by sql
 			func QueryBySql(sqlStr string, params []any) ([]model.{{.TableNameUpperCamel}}Model, error) {
-				{{.TableNameLowerCamel}}s := make([]model.{{.TableNameUpperCamel}}Model, 0)
 				maps,err := dbutil.PrepareQuery(sqlStr, params,getDatabase())
 				if err != nil {
 					err = errors.WithStack(err)
