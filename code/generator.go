@@ -304,9 +304,6 @@ func genFile(table *Module, packageName string) {
 		templateStr = getExtendTemplate()
 		filePath = table.ExtendFilePath
 		file = filePath + "/" + table.ExtendFileName
-		if IsExist(file) { //extend 不覆盖
-			return
-		}
 	} else if packageName == "view" {
 		templateStr = getViewTemplate()
 		filePath = table.ViewFilePath
@@ -325,9 +322,6 @@ func genFile(table *Module, packageName string) {
 		templateStr = getDaoTemplate()
 		filePath = table.DaoFilePath
 		file = filePath + "/" + table.DaoFileName
-		if IsExist(file) { //dao 不覆盖
-			return
-		}
 	} else if packageName == "service" {
 		templateStr = getServiceTemplate()
 		filePath = table.ServiceFilePath
