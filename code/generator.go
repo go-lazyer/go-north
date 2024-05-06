@@ -104,19 +104,19 @@ type Field struct {
 }
 
 var dbType = map[string]goType{
-	"int":                {"int32", "sql.NullInt32", "Int32", "0"},
-	"integer":            {"int32", "sql.NullInt32", "Int32", "0"},
-	"tinyint":            {"int32", "sql.NullInt32", "Int32", "0"},
-	"smallint":           {"int32", "sql.NullInt32", "Int32", "0"},
-	"mediumint":          {"int32", "sql.NullInt32", "Int32", "0"},
-	"bigint":             {"int32", "sql.NullInt32", "Int32", "0"},
-	"int unsigned":       {"int32", "sql.NullInt32", "Int32", "0"},
-	"integer unsigned":   {"int32", "sql.NullInt32", "Int32", "0"},
-	"tinyint unsigned":   {"int32", "sql.NullInt32", "Int32", "0"},
-	"smallint unsigned":  {"int32", "sql.NullInt32", "Int32", "0"},
-	"mediumint unsigned": {"int32", "sql.NullInt32", "Int32", "0"},
-	"bigint unsigned":    {"int32", "sql.NullInt32", "Int32", "0"},
-	"bit":                {"int32", "sql.NullInt32", "Int32", "0"},
+	"int":                {"int64", "sql.NullInt64", "Int64", "0"},
+	"integer":            {"int64", "sql.NullInt64", "Int64", "0"},
+	"tinyint":            {"int64", "sql.NullInt64", "Int64", "0"},
+	"smallint":           {"int64", "sql.NullInt64", "Int64", "0"},
+	"mediumint":          {"int64", "sql.NullInt64", "Int64", "0"},
+	"bigint":             {"int64", "sql.NullInt64", "Int64", "0"},
+	"int unsigned":       {"int64", "sql.NullInt64", "Int64", "0"},
+	"integer unsigned":   {"int64", "sql.NullInt64", "Int64", "0"},
+	"tinyint unsigned":   {"int64", "sql.NullInt64", "Int64", "0"},
+	"smallint unsigned":  {"int64", "sql.NullInt64", "Int64", "0"},
+	"mediumint unsigned": {"int64", "sql.NullInt64", "Int64", "0"},
+	"bigint unsigned":    {"int64", "sql.NullInt64", "Int64", "0"},
+	"bit":                {"int64", "sql.NullInt64", "Int64", "0"},
 	"bool":               {"bool", "sql.NullBool", "Bool", "false"},
 	"enum":               {"string", "sql.NullString", "String", "\"\""},
 	"set":                {"string", "sql.NullString", "String", "\"\""},
@@ -370,6 +370,71 @@ func genFile(table *Module, packageName string) {
 	cmd := exec.Command("gofmt", "-w", file)
 	cmd.Run()
 }
+
+func getModelTemplate() string {
+	return `// Create by code generator  {{.CreateTime}}
+	package model
+	
+	import (
+		"database/sql"
+		"time"
+	)
+	
+	const (
+		{{range $field := .Fields}}
+			{{- .ColumnNameUpper -}}  ="{{ .ColumnName }}" // {{ .Comment }}
+		{{end}}
+		TABLE_NAME  = "{{ .TableName }}" // 表名
+	)
+	
+	type {{.TableNameUpperCamel}}Model struct {
+		{{range $field := .Fields}}{{ .FieldName }}  {{ .FieldNullType }} ` + "`{{ .FieldOrmTag }} {{ .FieldDefaultTag }}`" + ` // {{ .Comment }}
+		{{end}}
+	}
+	
+
+	func MapToStruct(m map[string]any) {{.TableNameUpperCamel}}Model {
+		model := {{.TableNameUpperCamel}}Model{}
+
+		{{range $field := .Fields}}
+		if value, ok := m[{{ .ColumnNameUpper }}].({{ .FieldType }}); ok {
+			model.{{ .FieldName }} = {{.FieldNullType }}{value, true}
+		}
+		{{end}}
+	
+		return model
+	}
+	
+	func SliceToStructs(s []map[string]any) []{{.TableNameUpperCamel}}Model {
+		slices := make([]{{.TableNameUpperCamel}}Model, 0)
+		for _, m := range s {
+			slices = append(slices, MapToStruct(m))
+		}
+		return slices
+	}
+
+
+	func (m *{{.TableNameUpperCamel}}Model) ToMap(includeEmpty bool) map[string]any {
+		view := make(map[string]any)
+		{{range $field := .Fields}}
+			if m.{{ .FieldName }}.Valid {
+				view[{{- .ColumnNameUpper -}}] = m.{{ .FieldName }}.{{ .FieldNullTypeValue}}
+			} else if includeEmpty {
+				view[{{- .ColumnNameUpper -}}] = nil
+			}
+		{{end}}
+		return view
+	}`
+}
+func getExtendTemplate() string {
+	return `package model
+
+			type {{.TableNameUpperCamel}}Extend struct {
+				{{.TableNameUpperCamel}}Model
+			}
+			`
+}
+
 func getViewTemplate() string {
 	return ` // Create by code generator  {{.CreateTime}}
 	package view
@@ -408,38 +473,7 @@ func getViewTemplate() string {
 		return views
 	}`
 }
-func getServiceTemplate() string {
-	return `// Create by code generator  {{.CreateTime}}
-			package service
 
-			import (
-				"{{.DaoPackagePath}}"
-				"{{.ModelPackagePath}}"
-				"{{.ParamPackagePath}}"
-			
-				generator "github.com/go-lazyer/go-generator/sql"
-			)
-
-			{{ if gt (len .PrimaryKeyFields) 0 -}} 
-			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
-				{{.TableNameLowerCamel}}, err := dao.QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }}   {{end}})
-				if err != nil {
-					return nil,err
-				}
-				return {{.TableNameLowerCamel}},nil
-			}
-			{{end}}
-
-			func QueryByParam({{.TableNameLowerCamel}}Param *param.{{.TableNameUpperCamel}}Param) ([]model.{{.TableNameUpperCamel}}Model, error) {
-				query := generator.NewBoolQuery()
-				gen := generator.NewGenerator().PageNum({{.TableNameLowerCamel}}Param.PageNum).PageStart({{.TableNameLowerCamel}}Param.PageStart).PageSize({{.TableNameLowerCamel}}Param.PageSize).Table(model.TABLE_NAME).Where(query)
-				{{.TableNameLowerCamel}}s, err := dao.QueryByGen(gen)
-				if err != nil {
-					return nil,err
-				}
-				return {{.TableNameLowerCamel}}s,nil
-			}`
-}
 func getParamTemplate() string {
 	return `// Create by code generator  {{.CreateTime}}
 			package param
@@ -455,46 +489,7 @@ func getParamTemplate() string {
 				PageSize 	int ` + "`form:\"size\" json:\"size\"`" + `
 			}`
 }
-func getModelTemplate() string {
-	return `// Create by code generator  {{.CreateTime}}
-	package model
-	
-	import (
-		"database/sql"
-	)
-	
-	const (
-		{{range $field := .Fields}}
-			{{- .ColumnNameUpper -}}  ="{{ .ColumnName }}" // {{ .Comment }}
-		{{end}}
-		TABLE_NAME  = "{{ .TableName }}" // 表名
-	)
-	
-	type {{.TableNameUpperCamel}}Model struct {
-		{{range $field := .Fields}}{{ .FieldName }}  {{ .FieldNullType }} ` + "`{{ .FieldOrmTag }} {{ .FieldDefaultTag }}`" + ` // {{ .Comment }}
-		{{end}}
-	}
-	
-	func (m *{{.TableNameUpperCamel}}Model) ToMap(includeEmpty bool) map[string]any {
-		view := make(map[string]any)
-		{{range $field := .Fields}}
-			if m.{{ .FieldName }}.Valid {
-				view[{{- .ColumnNameUpper -}}] = m.{{ .FieldName }}.{{ .FieldNullTypeValue}}
-			} else if includeEmpty {
-				view[{{- .ColumnNameUpper -}}] = nil
-			}
-		{{end}}
-		return view
-	}`
-}
-func getExtendTemplate() string {
-	return `package model
 
-			type {{.TableNameUpperCamel}}Extend struct {
-				{{.TableNameUpperCamel}}Model
-			}
-			`
-}
 func getDaoTemplate() string {
 	return `// Create by go-generator  {{.CreateTime}}
 			package dao
@@ -780,7 +775,38 @@ func getDaoTemplate() string {
 				return count, nil
 			}`
 }
+func getServiceTemplate() string {
+	return `// Create by code generator  {{.CreateTime}}
+			package service
 
+			import (
+				"{{.DaoPackagePath}}"
+				"{{.ModelPackagePath}}"
+				"{{.ParamPackagePath}}"
+			
+				generator "github.com/go-lazyer/go-generator/sql"
+			)
+
+			{{ if gt (len .PrimaryKeyFields) 0 -}} 
+			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
+				{{.TableNameLowerCamel}}, err := dao.QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }}   {{end}})
+				if err != nil {
+					return nil,err
+				}
+				return {{.TableNameLowerCamel}},nil
+			}
+			{{end}}
+
+			func QueryByParam({{.TableNameLowerCamel}}Param *param.{{.TableNameUpperCamel}}Param) ([]model.{{.TableNameUpperCamel}}Model, error) {
+				query := generator.NewBoolQuery()
+				gen := generator.NewGenerator().PageNum({{.TableNameLowerCamel}}Param.PageNum).PageStart({{.TableNameLowerCamel}}Param.PageStart).PageSize({{.TableNameLowerCamel}}Param.PageSize).Table(model.TABLE_NAME).Where(query)
+				{{.TableNameLowerCamel}}s, err := dao.QueryByGen(gen)
+				if err != nil {
+					return nil,err
+				}
+				return {{.TableNameLowerCamel}}s,nil
+			}`
+}
 func getController() string {
 	return `// Create by code generator  {{.CreateTime}}
 			package controller
