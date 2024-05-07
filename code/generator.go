@@ -715,6 +715,7 @@ func getDaoTemplate() string {
 				return count, nil
 			}
 			// 批量更新，updateMaps中必须包含主键，联合主键的表不适应该方法
+			{{ if gt (len .PrimaryKeyFields) 0 -}}
 			func UpdateByMaps(updateMaps []map[string]any) (int64, error) {
 				if updateMaps == nil || len(updateMaps) == 0 {
 					return 0, nil
@@ -736,7 +737,7 @@ func getDaoTemplate() string {
 				}
 				return UpdateBySql(sqlStr, params)
 			}
-
+			{{end}}
 			
 			{{ if gt (len .PrimaryKeyFields) 0 -}}
 			func DeleteByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (int64, error) {
