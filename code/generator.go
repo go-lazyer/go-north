@@ -13,8 +13,9 @@ import (
 )
 
 type Generator struct {
-	dsn     string
-	project string
+	dsn        string
+	project    string
+	driverName string
 }
 
 func NewGenerator() *Generator {
@@ -22,6 +23,10 @@ func NewGenerator() *Generator {
 }
 func (gen *Generator) Dsn(dsn string) *Generator {
 	gen.dsn = dsn
+	return gen
+}
+func (gen *Generator) DriverName(driverName string) *Generator {
+	gen.driverName = driverName
 	return gen
 }
 func (gen *Generator) Project(project string) *Generator {
@@ -105,6 +110,8 @@ type Field struct {
 
 var dbType = map[string]goType{
 	"int":                {"int64", "sql.NullInt64", "Int64", "0"},
+	"int4":               {"int64", "sql.NullInt64", "Int64", "0"},
+	"int8":               {"int64", "sql.NullInt64", "Int64", "0"},
 	"integer":            {"int64", "sql.NullInt64", "Int64", "0"},
 	"tinyint":            {"int64", "sql.NullInt64", "Int64", "0"},
 	"smallint":           {"int64", "sql.NullInt64", "Int64", "0"},
@@ -135,6 +142,8 @@ var dbType = map[string]goType{
 	"timestamp":          {"time.Time", "sql.NullTime", "Time", "nil"},
 	"time":               {"time.Time", "sql.NullTime", "Time", "nil"},
 	"float":              {"float64", "sql.NullFloat64", "Float64", "0"},
+	"float4":             {"float64", "sql.NullFloat64", "Float64", "0"},
+	"float8":             {"float64", "sql.NullFloat64", "Float64", "0"},
 	"double":             {"float64", "sql.NullFloat64", "Float64", "0"},
 	"decimal":            {"float64", "sql.NullFloat64", "Float64", "0"},
 	"binary":             {"string", "sql.NullString", "String", "\"\""},
@@ -148,18 +157,37 @@ type goType struct {
 	defaultValue  string
 }
 
-func getFields(tableName string, db *sql.DB) ([]Field, []Field, error) {
+func getFields(tableName, driverName string, db *sql.DB) ([]Field, []Field, error) {
 	var sqlStr = `select
 					column_name name,
 					data_type type,
-					if('YES'=is_nullable,true,false) isNullable,
-					if('PRI'=column_key,true,false) isPrimaryKey,
+					if('YES'=is_nullable,true,false) is_nullable,
+					if('PRI'=column_key,true,false) is_primarykey,
 					column_comment comment,column_default 'default'
 				from
-					information_schema.COLUMNS 
+					information_schema.COLUMNS t
 				where
 					table_schema = DATABASE() `
-	sqlStr += fmt.Sprintf(" and table_name = '%s' order by isPrimaryKey desc", tableName)
+	sqlStr += fmt.Sprintf(" and t.table_name = '%s' order by is_primarykey desc", tableName)
+
+	if driverName == "postgres" {
+		sqlStr = `SELECT 
+						t.column_name name ,
+						t.udt_name type,
+						CASE WHEN t.is_nullable='YES' THEN 1  ELSE 0  END is_nullable,
+						CASE WHEN tc.constraint_type='PRIMARY KEY' THEN 1  ELSE 0  END is_primary_key,
+						t.column_comment comment,
+						t.column_default default
+					FROM 
+						information_schema.columns t 
+						left join information_schema.key_column_usage kcu on kcu.table_name=t.table_name and kcu.column_name=t.column_name
+						left join information_schema.table_constraints tc on tc.table_name=kcu.table_name and tc.constraint_name=kcu.constraint_name and tc.constraint_type='PRIMARY KEY'
+					WHERE 
+						t.table_catalog=current_database() and t.table_schema='public' ;
+		`
+		sqlStr += fmt.Sprintf(" and t.table_name = '%s' order by is_primarykey desc", tableName)
+	}
+
 	rows, err := db.Query(sqlStr)
 	if err != nil {
 		panic(err)
@@ -203,7 +231,10 @@ func (gen *Generator) Gen(modules []Module) error {
 	if gen.dsn == "" {
 		return errors.New("dsn can not nil")
 	}
-	db, err := sql.Open("mysql", gen.dsn)
+	if gen.driverName == "" {
+		gen.driverName = "mysql"
+	}
+	db, err := sql.Open(gen.driverName, gen.dsn)
 	if err != nil {
 		return err
 	}
@@ -212,7 +243,7 @@ func (gen *Generator) Gen(modules []Module) error {
 	}
 
 	for _, module := range modules {
-		fields, primaryKeyFields, err := getFields(module.TableName, db)
+		fields, primaryKeyFields, err := getFields(module.TableName, gen.driverName, db)
 		if err != nil {
 			fmt.Printf("error:create table %v error=%v", module.TableName, err)
 			continue
@@ -714,8 +745,8 @@ func getDaoTemplate() string {
 				}
 				return count, nil
 			}
-			// 批量更新，updateMaps中必须包含主键，联合主键的表不适应该方法
 			{{ if gt (len .PrimaryKeyFields) 0 -}}
+			// 批量更新，updateMaps中必须包含主键，联合主键的表不适应x该方法
 			func UpdateByMaps(updateMaps []map[string]any) (int64, error) {
 				if updateMaps == nil || len(updateMaps) == 0 {
 					return 0, nil
