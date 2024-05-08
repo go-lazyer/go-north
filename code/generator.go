@@ -183,7 +183,7 @@ func getFields(tableName, driverName string, db *sql.DB) ([]Field, []Field, erro
 						left join information_schema.key_column_usage kcu on kcu.table_name=t.table_name and kcu.column_name=t.column_name
 						left join information_schema.table_constraints tc on tc.table_name=kcu.table_name and tc.constraint_name=kcu.constraint_name and tc.constraint_type='PRIMARY KEY'
 					WHERE 
-						t.table_catalog=current_database() and t.table_schema='public' ;
+						t.table_catalog=current_database() and t.table_schema='public'
 		`
 		sqlStr += fmt.Sprintf(" and t.table_name = '%s' order by is_primarykey desc", tableName)
 	}
