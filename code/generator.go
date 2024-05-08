@@ -176,7 +176,7 @@ func getFields(tableName, driverName string, db *sql.DB) ([]Field, []Field, erro
 						t.udt_name type,
 						CASE WHEN t.is_nullable='YES' THEN 1  ELSE 0  END is_nullable,
 						CASE WHEN tc.constraint_type='PRIMARY KEY' THEN 1  ELSE 0  END is_primary_key,
-						t.column_comment comment,
+						CASE WHEN t.column_comment is null THEN ''	ELSE t.column_comment END  comment,
 						t.column_default default
 					FROM 
 						information_schema.columns t 
