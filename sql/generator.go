@@ -135,7 +135,7 @@ func (s *Generator) CountSql(prepare bool) (string, []any, error) {
 		sql.WriteString(strings.Join(s.columns, ","))
 	}
 
-	sql.WriteString(" from  `" + s.tableName + "`")
+	sql.WriteString(" from  " + s.tableName + "")
 
 	if s.tableAlias != "" {
 		sql.WriteString(" " + s.tableAlias + " ")
@@ -196,7 +196,7 @@ func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
 	} else {
 		sql.WriteString(strings.Join(s.columns, ","))
 	}
-	sql.WriteString(" from  `" + s.tableName + "`")
+	sql.WriteString(" from  " + s.tableName + "")
 
 	if s.tableAlias != "" {
 		sql.WriteString(" " + s.tableAlias + " ")
@@ -283,7 +283,7 @@ func (s *Generator) DeleteSql(prepare bool) (string, []any, error) {
 	}
 	params := make([]any, 0, 10)
 	var sql bytes.Buffer
-	sql.WriteString("delete from `" + s.tableName + "` ")
+	sql.WriteString("delete from " + s.tableName + " ")
 
 	sql.WriteString(" where   ")
 	for i, query := range s.querys {
@@ -306,7 +306,7 @@ func (s *Generator) InsertSql(prepare bool) (string, []any, error) {
 	params := make([]any, 0)
 	fields := make([]string, 0)
 	var sql bytes.Buffer
-	sql.WriteString("insert into `" + s.tableName + "` ")
+	sql.WriteString("insert into " + s.tableName + " ")
 	sql.WriteString("(")
 	if s.inserts != nil && len(s.inserts) > 0 {
 		//把所有要修改的字段提取出来
@@ -391,7 +391,7 @@ func (s *Generator) UpdateSql(prepare bool) (string, []any, error) {
 
 	params := make([]any, 0, 10)
 	var sql bytes.Buffer
-	sql.WriteString("update `" + s.tableName + "` set ")
+	sql.WriteString("update " + s.tableName + " set ")
 	n := 0
 	if s.updates != nil && len(s.updates) > 0 { //批量更新
 
