@@ -162,13 +162,13 @@ func getFields(tableName, driverName string, db *sql.DB) ([]Field, []Field, erro
 					column_name name,
 					data_type type,
 					if('YES'=is_nullable,true,false) is_nullable,
-					if('PRI'=column_key,true,false) is_primarykey,
+					if('PRI'=column_key,true,false) is_primary_key,
 					column_comment comment,column_default 'default'
 				from
 					information_schema.COLUMNS t
 				where
 					table_schema = DATABASE() `
-	sqlStr += fmt.Sprintf(" and t.table_name = '%s' order by is_primarykey desc", tableName)
+	sqlStr += fmt.Sprintf(" and t.table_name = '%s' order by is_primary_key desc", tableName)
 
 	if driverName == "postgres" {
 		sqlStr = `SELECT 
@@ -185,7 +185,7 @@ func getFields(tableName, driverName string, db *sql.DB) ([]Field, []Field, erro
 					WHERE 
 						t.table_catalog=current_database() and t.table_schema='public'
 		`
-		sqlStr += fmt.Sprintf(" and t.table_name = '%s' order by is_primarykey desc", tableName)
+		sqlStr += fmt.Sprintf(" and t.table_name = '%s' order by is_primary_key desc", tableName)
 	}
 
 	rows, err := db.Query(sqlStr)
