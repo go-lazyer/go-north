@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	INNER_JOIN = "inner join" // inner  join
-	LEFT_JOIN  = "left join"  // left  join
-	RIGHT_JOIN = "right join" // right join
+	INNER_JOIN      = "inner join" // inner  join
+	LEFT_JOIN       = "left join"  // left  join
+	RIGHT_JOIN      = "right join" // right join
+	PLACE_HOLDER_GO = "ⒼⓄ"         //
 )
 
 type Generator struct {
@@ -265,7 +266,7 @@ func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
 		}
 		params = append(params, s.pageStart, s.pageSize)
 		if prepare {
-			sql.WriteString(" limit ?,?")
+			sql.WriteString(fmt.Sprintf(" limit %s,%s", PLACE_HOLDER_GO, PLACE_HOLDER_GO))
 		} else {
 			sql.WriteString(fmt.Sprintf(" limit %d,%d", s.pageStart, s.pageSize))
 		}
@@ -337,7 +338,7 @@ func (s *Generator) InsertSql(prepare bool) (string, []any, error) {
 				}
 				params = append(params, maps[field])
 				if prepare {
-					sql.WriteString(" ? ")
+					sql.WriteString(fmt.Sprintf(" %s ", PLACE_HOLDER_GO))
 				} else {
 					sql.WriteString(fmt.Sprintf(" '%v' ", maps[field]))
 				}
@@ -367,7 +368,7 @@ func (s *Generator) InsertSql(prepare bool) (string, []any, error) {
 			}
 			params = append(params, s.insert[field])
 			if prepare {
-				sql.WriteString(" ? ")
+				sql.WriteString(fmt.Sprintf(" %s ", PLACE_HOLDER_GO))
 			} else {
 				sql.WriteString(fmt.Sprintf(" '%v' ", s.insert[field]))
 			}
@@ -419,7 +420,7 @@ func (s *Generator) UpdateSql(prepare bool) (string, []any, error) {
 				}
 				params = append(params, setMap[s.primary], v)
 				if prepare {
-					sql.WriteString(" WHEN ? THEN ?")
+					sql.WriteString(fmt.Sprintf(" WHEN %s THEN %s", PLACE_HOLDER_GO, PLACE_HOLDER_GO))
 				} else {
 					sql.WriteString(fmt.Sprintf(" WHEN '%v' THEN '%v'", setMap[s.primary], v))
 				}
@@ -433,7 +434,7 @@ func (s *Generator) UpdateSql(prepare bool) (string, []any, error) {
 				sql.WriteString(",")
 			}
 			if prepare {
-				sql.WriteString(fmt.Sprintf("%v=?", name))
+				sql.WriteString(fmt.Sprintf("%v=%s", name, PLACE_HOLDER_GO))
 			} else {
 				sql.WriteString(fmt.Sprintf("%v='%v'", name, value))
 			}

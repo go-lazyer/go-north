@@ -9,7 +9,16 @@ import (
 	"strings"
 )
 
+const (
+	DRIVER_NAME_POSTGRES = "postgres"
+	DRIVER_NAME_MYSQL    = "mysql"
+	PLACE_HOLDER_GO      = "ⒼⓄ" //
+)
+
 func Count(sql string, params []any, db *sql.DB) (int64, error) {
+	if db == nil {
+		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
+	}
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
@@ -33,6 +42,11 @@ func Count(sql string, params []any, db *sql.DB) (int64, error) {
 }
 
 func PrepareCount(sql string, params []any, db *sql.DB) (int64, error) {
+	if db == nil {
+		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
+	}
+	sql = prepareConvert(sql, getDriverName(db))
+
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
@@ -83,6 +97,7 @@ func PrepareQuery(sql string, params []any, db *sql.DB) ([]map[string]any, error
 	if db == nil {
 		return nil, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
+	sql = prepareConvert(sql, getDriverName(db))
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
@@ -106,6 +121,7 @@ func PrepareInsert(sql string, params []any, db *sql.DB) (int64, error) {
 	if db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
+	sql = prepareConvert(sql, getDriverName(db))
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
@@ -131,6 +147,7 @@ func PrepareUpdate(sql string, params []any, db *sql.DB) (int64, error) {
 	if db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
+	sql = prepareConvert(sql, getDriverName(db))
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
@@ -150,6 +167,7 @@ func PrepareSave(sql string, params []any, db *sql.DB) (int64, error) {
 	if db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
+	sql = prepareConvert(sql, getDriverName(db))
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
@@ -169,6 +187,7 @@ func PrepareDelete(sql string, params []any, db *sql.DB) (int64, error) {
 	if db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
+	sql = prepareConvert(sql, getDriverName(db))
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
@@ -414,4 +433,24 @@ func RowsToMapSlice(rows *sql.Rows) ([]map[string]any, error) {
 	}
 
 	return results, nil
+}
+func prepareConvert(sqlStr, driverName string) string {
+
+	if driverName == DRIVER_NAME_MYSQL {
+		return strings.ReplaceAll(sqlStr, PLACE_HOLDER_GO, "?")
+	}
+	n := 1
+	for strings.Index(sqlStr, PLACE_HOLDER_GO) > 0 {
+		sqlStr = strings.Replace(sqlStr, PLACE_HOLDER_GO, fmt.Sprintf("$%v", n), 1)
+		n = n + 1
+	}
+	return sqlStr
+}
+func getDriverName(db *sql.DB) string {
+	dbStr := fmt.Sprintf("%v", db)
+	if strings.Contains(dbStr, DRIVER_NAME_POSTGRES) {
+		return DRIVER_NAME_POSTGRES
+	} else {
+		return DRIVER_NAME_MYSQL
+	}
 }
