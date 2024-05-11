@@ -447,10 +447,5 @@ func prepareConvert(sqlStr, driverName string) string {
 	return sqlStr
 }
 func getDriverName(db *sql.DB) string {
-	dbStr := fmt.Sprintf("%v", db)
-	if strings.Contains(dbStr, DRIVER_NAME_POSTGRES) {
-		return DRIVER_NAME_POSTGRES
-	} else {
-		return DRIVER_NAME_MYSQL
-	}
+	return DRIVER_NAME_MYSQL
 }
