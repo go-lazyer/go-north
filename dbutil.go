@@ -1,4 +1,4 @@
-package dbutil
+package north
 
 import (
 	"database/sql"
@@ -18,6 +18,10 @@ const (
 type DataSource struct {
 	Db         *sql.DB
 	DriverName string
+}
+
+func Open(){
+	
 }
 
 func Count(sql string, params []any, dataSource DataSource) (int64, error) {

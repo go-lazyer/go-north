@@ -1,4 +1,4 @@
-package dbutil
+package north
 
 import (
 	"database/sql"
