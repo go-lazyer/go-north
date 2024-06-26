@@ -1,4 +1,4 @@
-module github.com/go-lazyer/go-generator
+module github.com/go-lazyer/go-north
 
 go 1.18
 
