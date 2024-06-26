@@ -712,7 +712,7 @@ func getDaoTemplate() string {
 				if err != nil {
 					return 0, errors.WithStack(err)
 				}
-				id, err := ds.PrepareInsert(sqlStr, params, getDatabase())
+				id, err := ds.PrepareInsert(sqlStr, params)
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0, err
@@ -826,7 +826,7 @@ func getDaoTemplate() string {
 				if err != nil {
 					return 0, errors.WithStack(err)
 				}
-				count, err := ds.PrepareDelete(sqlStr, params, getDatabase())
+				count, err := ds.PrepareDelete(sqlStr, params)
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0, err
