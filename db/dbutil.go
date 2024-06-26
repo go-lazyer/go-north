@@ -451,6 +451,3 @@ func prepareConvert(sqlStr, driverName string) string {
 	}
 	return sqlStr
 }
-func getDriverName(dataSource DataSource) string {
-	return DRIVER_NAME_MYSQL
-}
