@@ -15,8 +15,13 @@ const (
 	PLACE_HOLDER_GO      = "ⒼⓄ" //
 )
 
-func Count(sql string, params []any, db *sql.DB) (int64, error) {
-	if db == nil {
+type DataSource struct {
+	Db         *sql.DB
+	DriverName string
+}
+
+func Count(sql string, params []any, dataSource DataSource) (int64, error) {
+	if dataSource.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
 	serverMode := os.Getenv("sql.log")
@@ -25,7 +30,7 @@ func Count(sql string, params []any, db *sql.DB) (int64, error) {
 		fmt.Printf("params is %v\n", params)
 	}
 
-	rows, err := db.Query(sql, params...)
+	rows, err := dataSource.Db.Query(sql, params...)
 	if err != nil {
 		return 0, err
 	}
@@ -41,11 +46,11 @@ func Count(sql string, params []any, db *sql.DB) (int64, error) {
 	return count, nil
 }
 
-func PrepareCount(sql string, params []any, db *sql.DB) (int64, error) {
-	if db == nil {
+func PrepareCount(sql string, params []any, dataSource DataSource) (int64, error) {
+	if dataSource.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
-	sql = prepareConvert(sql, getDriverName(db))
+	sql = prepareConvert(sql, dataSource.DriverName)
 
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
@@ -53,7 +58,7 @@ func PrepareCount(sql string, params []any, db *sql.DB) (int64, error) {
 		fmt.Printf("params is %v\n", params)
 	}
 
-	stmt, err := db.Prepare(sql)
+	stmt, err := dataSource.Db.Prepare(sql)
 	if err != nil {
 		return 0, err
 	}
@@ -75,8 +80,8 @@ func PrepareCount(sql string, params []any, db *sql.DB) (int64, error) {
 }
 
 // 普通查询
-func Query(sql string, params []any, db *sql.DB) ([]map[string]any, error) {
-	if db == nil {
+func Query(sql string, params []any, dataSource DataSource) ([]map[string]any, error) {
+	if dataSource.Db == nil {
 		return nil, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
 	serverMode := os.Getenv("sql.log")
@@ -84,7 +89,7 @@ func Query(sql string, params []any, db *sql.DB) ([]map[string]any, error) {
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
-	rows, err := db.Query(sql, params...)
+	rows, err := dataSource.Db.Query(sql, params...)
 	if err != nil {
 		return nil, err
 	}
@@ -93,17 +98,17 @@ func Query(sql string, params []any, db *sql.DB) ([]map[string]any, error) {
 }
 
 // 预处理查询
-func PrepareQuery(sql string, params []any, db *sql.DB) ([]map[string]any, error) {
-	if db == nil {
+func PrepareQuery(sql string, params []any, dataSource DataSource) ([]map[string]any, error) {
+	if dataSource.Db == nil {
 		return nil, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
-	sql = prepareConvert(sql, getDriverName(db))
+	sql = prepareConvert(sql, dataSource.DriverName)
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
-	stmt, err := db.Prepare(sql)
+	stmt, err := dataSource.Db.Prepare(sql)
 	if err != nil {
 		return nil, err
 	}
@@ -117,17 +122,17 @@ func PrepareQuery(sql string, params []any, db *sql.DB) ([]map[string]any, error
 }
 
 // 预处理插入 返回批量自增ID
-func PrepareInsert(sql string, params []any, db *sql.DB) (int64, error) {
-	if db == nil {
+func PrepareInsert(sql string, params []any, dataSource DataSource) (int64, error) {
+	if dataSource.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
-	sql = prepareConvert(sql, getDriverName(db))
+	sql = prepareConvert(sql, dataSource.DriverName)
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
-	stmt, err := db.Prepare(sql)
+	stmt, err := dataSource.Db.Prepare(sql)
 	if err != nil {
 		return 0, err
 	}
@@ -143,17 +148,17 @@ func PrepareInsert(sql string, params []any, db *sql.DB) (int64, error) {
 	return id, nil
 }
 
-func PrepareUpdate(sql string, params []any, db *sql.DB) (int64, error) {
-	if db == nil {
+func PrepareUpdate(sql string, params []any, dataSource DataSource) (int64, error) {
+	if dataSource.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
-	sql = prepareConvert(sql, getDriverName(db))
+	sql = prepareConvert(sql, dataSource.DriverName)
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
-	ret, err := db.Exec(sql, params...)
+	ret, err := dataSource.Db.Exec(sql, params...)
 	if err != nil {
 		return 0, err
 	}
@@ -163,17 +168,17 @@ func PrepareUpdate(sql string, params []any, db *sql.DB) (int64, error) {
 	}
 	return n, nil
 }
-func PrepareSave(sql string, params []any, db *sql.DB) (int64, error) {
-	if db == nil {
+func PrepareSave(sql string, params []any, dataSource DataSource) (int64, error) {
+	if dataSource.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
-	sql = prepareConvert(sql, getDriverName(db))
+	sql = prepareConvert(sql, dataSource.DriverName)
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
-	ret, err := db.Exec(sql, params...)
+	ret, err := dataSource.Db.Exec(sql, params...)
 	if err != nil {
 		return 0, err
 	}
@@ -183,17 +188,17 @@ func PrepareSave(sql string, params []any, db *sql.DB) (int64, error) {
 	}
 	return n, nil
 }
-func PrepareDelete(sql string, params []any, db *sql.DB) (int64, error) {
-	if db == nil {
+func PrepareDelete(sql string, params []any, dataSource DataSource) (int64, error) {
+	if dataSource.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
-	sql = prepareConvert(sql, getDriverName(db))
+	sql = prepareConvert(sql, dataSource.DriverName)
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
-	ret, err := db.Exec(sql, params...)
+	ret, err := dataSource.Db.Exec(sql, params...)
 	if err != nil {
 		return 0, err
 	}
@@ -434,8 +439,8 @@ func RowsToMapSlice(rows *sql.Rows) ([]map[string]any, error) {
 
 	return results, nil
 }
-func prepareConvert(sqlStr, driverName string) string {
 
+func prepareConvert(sqlStr, driverName string) string {
 	if driverName == DRIVER_NAME_MYSQL {
 		return strings.ReplaceAll(sqlStr, PLACE_HOLDER_GO, "?")
 	}
@@ -446,6 +451,6 @@ func prepareConvert(sqlStr, driverName string) string {
 	}
 	return sqlStr
 }
-func getDriverName(db *sql.DB) string {
+func getDriverName(dataSource DataSource) string {
 	return DRIVER_NAME_MYSQL
 }
