@@ -599,7 +599,11 @@ func getDaoTemplate() string {
 			
 			// query map by sql
 			func QueryMapBySql(sqlStr string, params []any) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
-				maps,err := database.Database().PrepareQuery(sqlStr, params)
+				ds, err := database.DataSource()
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				maps,err := ds.PrepareQuery(sqlStr, params)
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err
@@ -628,7 +632,11 @@ func getDaoTemplate() string {
 			}
 			// count by gen
 			func CountBySql(sqlStr string, params []any) (int64, error) {
-				count, err := database.North.PrepareCount(sqlStr, params)
+				ds, err := database.DataSource()
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				count, err := ds.PrepareCount(sqlStr, params)
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0,err
@@ -647,7 +655,11 @@ func getDaoTemplate() string {
 			}
 			// query by sql
 			func QueryBySql(sqlStr string, params []any) ([]model.{{.TableNameUpperCamel}}Model, error) {
-				maps,err := database.North.PrepareQuery(sqlStr, params)
+				ds, err := database.DataSource()
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				maps,err := ds.PrepareQuery(sqlStr, params)
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err
@@ -668,7 +680,11 @@ func getDaoTemplate() string {
 			}
 			// query extend by sql
 			func QueryExtendBySql(sqlStr string, params []any) ([]model.{{.TableNameUpperCamel}}Extend, error) {
-				maps,err := database.North.PrepareQuery(sqlStr, params)
+				ds, err := database.DataSource()
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				maps,err := ds.PrepareQuery(sqlStr, params)
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err
@@ -692,7 +708,11 @@ func getDaoTemplate() string {
 			}
 			
 			func InsertBySql(sqlStr string, params []any) (int64, error) {
-				id, err := database.North.PrepareInsert(sqlStr, params, getDatabase())
+				ds, err := database.DataSource()
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				id, err := ds.PrepareInsert(sqlStr, params, getDatabase())
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0, err
@@ -730,7 +750,11 @@ func getDaoTemplate() string {
 			}
 			
 			func UpdateBySql(sqlStr string, params []any) (int64, error) {
-				count, err := database.North.PrepareUpdate(sqlStr, params)
+				ds, err := database.DataSource()
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				count, err := ds.PrepareUpdate(sqlStr, params)
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0, err
@@ -798,7 +822,11 @@ func getDaoTemplate() string {
 				return DeleteBySql(sqlStr, params)
 			}
 			func DeleteBySql(sqlStr string, params []any) (int64, error) {
-				count, err := database.North.PrepareDelete(sqlStr, params, getDatabase())
+				ds, err := database.DataSource()
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				count, err := ds.PrepareDelete(sqlStr, params, getDatabase())
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0, err
