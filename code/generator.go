@@ -536,8 +536,6 @@ func getDaoTemplate() string {
 			import (
 				generator "github.com/go-lazyer/go-north/generator"
 				"{{.ModelPackagePath}}"
-				"database/sql"
-				"fmt"
 				"github.com/pkg/errors"
 			)
 			{{ if gt (len .PrimaryKeyFields) 0 -}}
