@@ -599,7 +599,7 @@ func getDaoTemplate() string {
 			
 			// query map by sql
 			func QueryMapBySql(sqlStr string, params []any) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
-				maps,err := database.North.PrepareQuery(sqlStr, params,getDatabase())
+				maps,err := database.North.PrepareQuery(sqlStr, params)
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err
@@ -628,7 +628,7 @@ func getDaoTemplate() string {
 			}
 			// count by gen
 			func CountBySql(sqlStr string, params []any) (int64, error) {
-				count, err := database.North.PrepareCount(sqlStr, params,getDatabase())
+				count, err := database.North.PrepareCount(sqlStr, params)
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0,err
@@ -647,7 +647,7 @@ func getDaoTemplate() string {
 			}
 			// query by sql
 			func QueryBySql(sqlStr string, params []any) ([]model.{{.TableNameUpperCamel}}Model, error) {
-				maps,err := database.North.PrepareQuery(sqlStr, params,getDatabase())
+				maps,err := database.North.PrepareQuery(sqlStr, params)
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err
@@ -668,7 +668,7 @@ func getDaoTemplate() string {
 			}
 			// query extend by sql
 			func QueryExtendBySql(sqlStr string, params []any) ([]model.{{.TableNameUpperCamel}}Extend, error) {
-				maps,err := database.North.PrepareQuery(sqlStr, params,getDatabase())
+				maps,err := database.North.PrepareQuery(sqlStr, params)
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err
@@ -730,7 +730,7 @@ func getDaoTemplate() string {
 			}
 			
 			func UpdateBySql(sqlStr string, params []any) (int64, error) {
-				count, err := database.North.PrepareUpdate(sqlStr, params,getDatabase())
+				count, err := database.North.PrepareUpdate(sqlStr, params)
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0, err
