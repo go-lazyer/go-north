@@ -599,7 +599,7 @@ func getDaoTemplate() string {
 			
 			// query map by sql
 			func QueryMapBySql(sqlStr string, params []any) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
-				maps,err := database.North.PrepareQuery(sqlStr, params)
+				maps,err := database.Database().PrepareQuery(sqlStr, params)
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err
