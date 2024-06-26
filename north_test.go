@@ -6,8 +6,7 @@ import (
 	"log"
 	"testing"
 	"time"
-
-	_ "github.com/go-sql-driver/mysql"
+	// _ "github.com/go-sql-driver/mysql"
 )
 
 const (
@@ -34,7 +33,7 @@ func ToStruct(m map[string]any) Test {
 	}
 	if value, ok := m[DAY].(time.Time); ok {
 		// 如果已经是 time.Time 类型，则直接使用
-		model.Day = sql.NullTime{value, true}
+		model.Day = sql.NullTime{Time: value, Valid: true}
 	}
 	return model
 }

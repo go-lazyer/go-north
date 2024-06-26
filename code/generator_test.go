@@ -3,8 +3,7 @@ package generator
 import (
 	"fmt"
 	"testing"
-
-	_ "github.com/go-sql-driver/mysql"
+	// _ "github.com/go-sql-driver/mysql"
 )
 
 func TestGenModel(t *testing.T) {

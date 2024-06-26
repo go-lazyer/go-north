@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"runtime"
+	"slices"
 	"strings"
 )
 
@@ -15,34 +17,38 @@ const (
 	PLACE_HOLDER_GO      = "ⒼⓄ" //
 )
 
-type DataSource struct {
-	Db         *sql.DB
-	DriverName string
-}
-type Config struct {
-	maxOpenConns int
-	maxIdleConns int
+type North struct {
+	DataSources []*DataSource
 }
 
-func Open(driverName string, dsn string, config *Config) (*DataSource, error) {
-	db, err := sql.Open(driverName, dsn)
-	if err != nil {
-		return nil, err
+func New() *North {
+	return &North{}
+}
+
+func (north *North) Add(dataSource *DataSource) {
+	if north.DataSources == nil {
+		north.DataSources = make([]*DataSource, 0)
 	}
-	err = db.Ping()
-	if err != nil {
-		return nil, err
+	north.DataSources = append(north.DataSources, dataSource)
+}
+func (north *North) getDataSource(filePath string) *DataSource {
+	if len(north.DataSources) == 1 {
+		return north.DataSources[0]
 	}
-	db.SetMaxOpenConns(config.maxOpenConns)
-	db.SetMaxIdleConns(config.maxIdleConns)
-
-	return &DataSource{
-		Db:         db,
-		DriverName: driverName,
-	}, nil
+	for _, dataSource := range north.DataSources {
+		if slices.Contains(dataSource.DaoFilePaths, filePath) {
+			return dataSource
+		}
+	}
+	return nil
 }
 
-func (ds *DataSource) Count(sql string, params []any) (int64, error) {
+func (north *North) Count(sql string, params []any) (int64, error) {
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		return 0, errors.New("failed to get caller infof")
+	}
+	ds := north.getDataSource(file)
 	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -68,7 +74,12 @@ func (ds *DataSource) Count(sql string, params []any) (int64, error) {
 	return count, nil
 }
 
-func (ds *DataSource) PrepareCount(sql string, params []any) (int64, error) {
+func (north *North) PrepareCount(sql string, params []any) (int64, error) {
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		return 0, errors.New("failed to get caller infof")
+	}
+	ds := north.getDataSource(file)
 	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -102,7 +113,12 @@ func (ds *DataSource) PrepareCount(sql string, params []any) (int64, error) {
 }
 
 // 普通查询
-func (ds *DataSource) Query(sql string, params []any) ([]map[string]any, error) {
+func (north *North) Query(sql string, params []any) ([]map[string]any, error) {
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		return nil, errors.New("failed to get caller infof")
+	}
+	ds := north.getDataSource(file)
 	if ds.Db == nil {
 		return nil, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -120,7 +136,12 @@ func (ds *DataSource) Query(sql string, params []any) ([]map[string]any, error) 
 }
 
 // 预处理查询
-func (ds *DataSource) PrepareQuery(sql string, params []any) ([]map[string]any, error) {
+func (north *North) PrepareQuery(sql string, params []any) ([]map[string]any, error) {
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		return nil, errors.New("failed to get caller infof")
+	}
+	ds := north.getDataSource(file)
 	if ds.Db == nil {
 		return nil, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -144,7 +165,12 @@ func (ds *DataSource) PrepareQuery(sql string, params []any) ([]map[string]any, 
 }
 
 // 预处理插入 返回批量自增ID
-func (ds *DataSource) PrepareInsert(sql string, params []any) (int64, error) {
+func (north *North) PrepareInsert(sql string, params []any) (int64, error) {
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		return 0, errors.New("failed to get caller infof")
+	}
+	ds := north.getDataSource(file)
 	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -170,7 +196,12 @@ func (ds *DataSource) PrepareInsert(sql string, params []any) (int64, error) {
 	return id, nil
 }
 
-func (ds *DataSource) PrepareUpdate(sql string, params []any) (int64, error) {
+func (north *North) PrepareUpdate(sql string, params []any) (int64, error) {
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		return 0, errors.New("failed to get caller infof")
+	}
+	ds := north.getDataSource(file)
 	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -190,7 +221,12 @@ func (ds *DataSource) PrepareUpdate(sql string, params []any) (int64, error) {
 	}
 	return n, nil
 }
-func (ds *DataSource) PrepareSave(sql string, params []any) (int64, error) {
+func (north *North) PrepareSave(sql string, params []any) (int64, error) {
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		return 0, errors.New("failed to get caller infof")
+	}
+	ds := north.getDataSource(file)
 	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -210,7 +246,12 @@ func (ds *DataSource) PrepareSave(sql string, params []any) (int64, error) {
 	}
 	return n, nil
 }
-func (ds *DataSource) PrepareDelete(sql string, params []any) (int64, error) {
+func (north *North) PrepareDelete(sql string, params []any) (int64, error) {
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		return 0, errors.New("failed to get caller infof")
+	}
+	ds := north.getDataSource(file)
 	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
