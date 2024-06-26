@@ -337,6 +337,9 @@ func genFile(table *Module, packageName string) {
 		templateStr = getExtendTemplate()
 		filePath = table.ExtendFilePath
 		file = filePath + "/" + table.ExtendFileName
+		if IsExist(file) { //view 不覆盖
+			return
+		}
 	} else if packageName == "view" {
 		templateStr = getViewTemplate()
 		filePath = table.ViewFilePath
