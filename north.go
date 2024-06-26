@@ -19,13 +19,31 @@ type DataSource struct {
 	Db         *sql.DB
 	DriverName string
 }
-
-func Open(){
-	
+type Config struct {
+	maxOpenConns int
+	maxIdleConns int
 }
 
-func Count(sql string, params []any, dataSource DataSource) (int64, error) {
-	if dataSource.Db == nil {
+func Open(driverName string, dsn string, config *Config) (*DataSource, error) {
+	db, err := sql.Open(driverName, dsn)
+	if err != nil {
+		return nil, err
+	}
+	err = db.Ping()
+	if err != nil {
+		return nil, err
+	}
+	db.SetMaxOpenConns(config.maxOpenConns)
+	db.SetMaxIdleConns(config.maxIdleConns)
+
+	return &DataSource{
+		Db:         db,
+		DriverName: driverName,
+	}, nil
+}
+
+func (ds *DataSource) Count(sql string, params []any) (int64, error) {
+	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
 	serverMode := os.Getenv("sql.log")
@@ -34,7 +52,7 @@ func Count(sql string, params []any, dataSource DataSource) (int64, error) {
 		fmt.Printf("params is %v\n", params)
 	}
 
-	rows, err := dataSource.Db.Query(sql, params...)
+	rows, err := ds.Db.Query(sql, params...)
 	if err != nil {
 		return 0, err
 	}
@@ -50,11 +68,11 @@ func Count(sql string, params []any, dataSource DataSource) (int64, error) {
 	return count, nil
 }
 
-func PrepareCount(sql string, params []any, dataSource DataSource) (int64, error) {
-	if dataSource.Db == nil {
+func (ds *DataSource) PrepareCount(sql string, params []any) (int64, error) {
+	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
-	sql = prepareConvert(sql, dataSource.DriverName)
+	sql = prepareConvert(sql, ds.DriverName)
 
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
@@ -62,7 +80,7 @@ func PrepareCount(sql string, params []any, dataSource DataSource) (int64, error
 		fmt.Printf("params is %v\n", params)
 	}
 
-	stmt, err := dataSource.Db.Prepare(sql)
+	stmt, err := ds.Db.Prepare(sql)
 	if err != nil {
 		return 0, err
 	}
@@ -84,8 +102,8 @@ func PrepareCount(sql string, params []any, dataSource DataSource) (int64, error
 }
 
 // 普通查询
-func Query(sql string, params []any, dataSource DataSource) ([]map[string]any, error) {
-	if dataSource.Db == nil {
+func (ds *DataSource) Query(sql string, params []any) ([]map[string]any, error) {
+	if ds.Db == nil {
 		return nil, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
 	serverMode := os.Getenv("sql.log")
@@ -93,7 +111,7 @@ func Query(sql string, params []any, dataSource DataSource) ([]map[string]any, e
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
-	rows, err := dataSource.Db.Query(sql, params...)
+	rows, err := ds.Db.Query(sql, params...)
 	if err != nil {
 		return nil, err
 	}
@@ -102,17 +120,17 @@ func Query(sql string, params []any, dataSource DataSource) ([]map[string]any, e
 }
 
 // 预处理查询
-func PrepareQuery(sql string, params []any, dataSource DataSource) ([]map[string]any, error) {
-	if dataSource.Db == nil {
+func (ds *DataSource) PrepareQuery(sql string, params []any) ([]map[string]any, error) {
+	if ds.Db == nil {
 		return nil, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
-	sql = prepareConvert(sql, dataSource.DriverName)
+	sql = prepareConvert(sql, ds.DriverName)
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
-	stmt, err := dataSource.Db.Prepare(sql)
+	stmt, err := ds.Db.Prepare(sql)
 	if err != nil {
 		return nil, err
 	}
@@ -126,17 +144,17 @@ func PrepareQuery(sql string, params []any, dataSource DataSource) ([]map[string
 }
 
 // 预处理插入 返回批量自增ID
-func PrepareInsert(sql string, params []any, dataSource DataSource) (int64, error) {
-	if dataSource.Db == nil {
+func (ds *DataSource) PrepareInsert(sql string, params []any) (int64, error) {
+	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
-	sql = prepareConvert(sql, dataSource.DriverName)
+	sql = prepareConvert(sql, ds.DriverName)
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
-	stmt, err := dataSource.Db.Prepare(sql)
+	stmt, err := ds.Db.Prepare(sql)
 	if err != nil {
 		return 0, err
 	}
@@ -152,17 +170,17 @@ func PrepareInsert(sql string, params []any, dataSource DataSource) (int64, erro
 	return id, nil
 }
 
-func PrepareUpdate(sql string, params []any, dataSource DataSource) (int64, error) {
-	if dataSource.Db == nil {
+func (ds *DataSource) PrepareUpdate(sql string, params []any) (int64, error) {
+	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
-	sql = prepareConvert(sql, dataSource.DriverName)
+	sql = prepareConvert(sql, ds.DriverName)
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
-	ret, err := dataSource.Db.Exec(sql, params...)
+	ret, err := ds.Db.Exec(sql, params...)
 	if err != nil {
 		return 0, err
 	}
@@ -172,17 +190,17 @@ func PrepareUpdate(sql string, params []any, dataSource DataSource) (int64, erro
 	}
 	return n, nil
 }
-func PrepareSave(sql string, params []any, dataSource DataSource) (int64, error) {
-	if dataSource.Db == nil {
+func (ds *DataSource) PrepareSave(sql string, params []any) (int64, error) {
+	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
-	sql = prepareConvert(sql, dataSource.DriverName)
+	sql = prepareConvert(sql, ds.DriverName)
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
-	ret, err := dataSource.Db.Exec(sql, params...)
+	ret, err := ds.Db.Exec(sql, params...)
 	if err != nil {
 		return 0, err
 	}
@@ -192,17 +210,17 @@ func PrepareSave(sql string, params []any, dataSource DataSource) (int64, error)
 	}
 	return n, nil
 }
-func PrepareDelete(sql string, params []any, dataSource DataSource) (int64, error) {
-	if dataSource.Db == nil {
+func (ds *DataSource) PrepareDelete(sql string, params []any) (int64, error) {
+	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
-	sql = prepareConvert(sql, dataSource.DriverName)
+	sql = prepareConvert(sql, ds.DriverName)
 	serverMode := os.Getenv("sql.log")
 	if serverMode == "stdout" {
 		fmt.Printf("sql is %v\n", sql)
 		fmt.Printf("params is %v\n", params)
 	}
-	ret, err := dataSource.Db.Exec(sql, params...)
+	ret, err := ds.Db.Exec(sql, params...)
 	if err != nil {
 		return 0, err
 	}
