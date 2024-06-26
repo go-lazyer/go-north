@@ -7,7 +7,6 @@ import (
 	"os"
 	"reflect"
 	"runtime"
-	"slices"
 	"strings"
 )
 
@@ -32,12 +31,14 @@ func (north *North) Add(dataSource *DataSource) {
 	north.DataSources = append(north.DataSources, dataSource)
 }
 func (north *North) getDataSource(filePath string) *DataSource {
-	if len(north.DataSources) == 1 {
-		return north.DataSources[0]
-	}
+	// if len(north.DataSources) == 1 {
+	// 	return north.DataSources[0]
+	// }
 	for _, dataSource := range north.DataSources {
-		if slices.Contains(dataSource.DaoFilePaths, filePath) {
-			return dataSource
+		for _, daoFilePath := range dataSource.DaoFilePaths {
+			if strings.Contains(filePath, daoFilePath) {
+				return dataSource
+			}
 		}
 	}
 	return nil

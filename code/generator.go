@@ -534,20 +534,12 @@ func getDaoTemplate() string {
 			package dao
 			
 			import (
-				dbutil "github.com/go-lazyer/go-generator/db"
-				generator "github.com/go-lazyer/go-generator/sql"
+				generator "github.com/go-lazyer/go-north/generator"
 				"{{.ModelPackagePath}}"
 				"database/sql"
 				"fmt"
 				"github.com/pkg/errors"
 			)
-			func getDatabase() *sql.DB {
-				var database *sql.DB
-				if database == nil {
-					fmt.Println("db not allowed to be nil,need to instantiate yourself")
-				}
-				return database
-			}
 			{{ if gt (len .PrimaryKeyFields) 0 -}}
 			// query first by primaryKey
 			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
@@ -609,7 +601,7 @@ func getDaoTemplate() string {
 			
 			// query map by sql
 			func QueryMapBySql(sqlStr string, params []any) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
-				maps,err := dbutil.PrepareQuery(sqlStr, params,getDatabase())
+				maps,err := database.North.PrepareQuery(sqlStr, params,getDatabase())
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err
@@ -638,7 +630,7 @@ func getDaoTemplate() string {
 			}
 			// count by gen
 			func CountBySql(sqlStr string, params []any) (int64, error) {
-				count, err := dbutil.PrepareCount(sqlStr, params,getDatabase())
+				count, err := database.North.PrepareCount(sqlStr, params,getDatabase())
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0,err
@@ -657,7 +649,7 @@ func getDaoTemplate() string {
 			}
 			// query by sql
 			func QueryBySql(sqlStr string, params []any) ([]model.{{.TableNameUpperCamel}}Model, error) {
-				maps,err := dbutil.PrepareQuery(sqlStr, params,getDatabase())
+				maps,err := database.North.PrepareQuery(sqlStr, params,getDatabase())
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err
@@ -678,7 +670,7 @@ func getDaoTemplate() string {
 			}
 			// query extend by sql
 			func QueryExtendBySql(sqlStr string, params []any) ([]model.{{.TableNameUpperCamel}}Extend, error) {
-				maps,err := dbutil.PrepareQuery(sqlStr, params,getDatabase())
+				maps,err := database.North.PrepareQuery(sqlStr, params,getDatabase())
 				if err != nil {
 					err = errors.WithStack(err)
 					return nil,err
@@ -702,7 +694,7 @@ func getDaoTemplate() string {
 			}
 			
 			func InsertBySql(sqlStr string, params []any) (int64, error) {
-				id, err := dbutil.PrepareInsert(sqlStr, params, getDatabase())
+				id, err := database.North.PrepareInsert(sqlStr, params, getDatabase())
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0, err
@@ -740,7 +732,7 @@ func getDaoTemplate() string {
 			}
 			
 			func UpdateBySql(sqlStr string, params []any) (int64, error) {
-				count, err := dbutil.PrepareUpdate(sqlStr, params,getDatabase())
+				count, err := database.North.PrepareUpdate(sqlStr, params,getDatabase())
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0, err
@@ -808,7 +800,7 @@ func getDaoTemplate() string {
 				return DeleteBySql(sqlStr, params)
 			}
 			func DeleteBySql(sqlStr string, params []any) (int64, error) {
-				count, err := dbutil.PrepareDelete(sqlStr, params, getDatabase())
+				count, err := database.North.PrepareDelete(sqlStr, params, getDatabase())
 				if err != nil {
 					err = errors.WithStack(err)
 					return 0, err
