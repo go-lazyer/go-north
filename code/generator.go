@@ -601,7 +601,7 @@ func getDaoTemplate() string {
 			func QueryMapBySql(sqlStr string, params []any) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
 				ds, err := database.DataSource()
 				if err != nil {
-					return 0, errors.WithStack(err)
+					return nil, errors.WithStack(err)
 				}
 				maps,err := ds.PrepareQuery(sqlStr, params)
 				if err != nil {
@@ -657,7 +657,7 @@ func getDaoTemplate() string {
 			func QueryBySql(sqlStr string, params []any) ([]model.{{.TableNameUpperCamel}}Model, error) {
 				ds, err := database.DataSource()
 				if err != nil {
-					return 0, errors.WithStack(err)
+					return nil, errors.WithStack(err)
 				}
 				maps,err := ds.PrepareQuery(sqlStr, params)
 				if err != nil {
@@ -682,7 +682,7 @@ func getDaoTemplate() string {
 			func QueryExtendBySql(sqlStr string, params []any) ([]model.{{.TableNameUpperCamel}}Extend, error) {
 				ds, err := database.DataSource()
 				if err != nil {
-					return 0, errors.WithStack(err)
+					return nil, errors.WithStack(err)
 				}
 				maps,err := ds.PrepareQuery(sqlStr, params)
 				if err != nil {
