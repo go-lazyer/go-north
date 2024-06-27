@@ -552,8 +552,7 @@ func getDaoTemplate() string {
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(query)
 				sqlStr, params, err := gen.SelectSql(true)
 				if err != nil {
-					err = errors.WithStack(err)
-					return nil,err
+					return nil,errors.WithStack(err)
 				}
 				return QueryFirstBySql(sqlStr, params)
 			}
@@ -562,8 +561,7 @@ func getDaoTemplate() string {
 			func QueryFirstByGen(gen *generator.Generator) (*model.{{.TableNameUpperCamel}}Model, error) {
 				sqlStr, params, err := gen.SelectSql(true)
 				if err != nil {
-					err = errors.WithStack(err)
-					return nil,err
+					return nil,errors.WithStack(err)
 				}
 				return QueryFirstBySql(sqlStr, params)
 			}
@@ -572,8 +570,7 @@ func getDaoTemplate() string {
 				models, err := QueryBySql(sqlStr, params)
 
 				if models == nil || len(models) == 0 || err != nil {
-					err = errors.WithStack(err)
-					return nil, err
+					return nil, errors.WithStack(err)
 				}
 				return &(models[0]), nil
 			}
@@ -583,8 +580,7 @@ func getDaoTemplate() string {
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, primaryKeys))
 				sqlStr, params, err := gen.SelectSql(true)
 				if err != nil {
-					err = errors.WithStack(err)
-					return nil,err
+					return nil,errors.WithStack(err)
 				}
 				return QueryMapBySql(sqlStr, params)
 			}
@@ -594,8 +590,7 @@ func getDaoTemplate() string {
 			func QueryMapByGen(gen *generator.Generator) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
 				sqlStr, params, err := gen.SelectSql(true)
 				if err != nil {
-					err = errors.WithStack(err)
-					return nil, err
+					return nil, errors.WithStack(err)
 				}
 				return QueryMapBySql(sqlStr, params)
 			}
@@ -608,8 +603,7 @@ func getDaoTemplate() string {
 				}
 				maps,err := ds.PrepareQuery(sqlStr, params)
 				if err != nil {
-					err = errors.WithStack(err)
-					return nil,err
+					return nil,errors.WithStack(err)
 				}
 				{{.TableNameLowerCamel}}s:= model.SliceToStructs(maps)
 
@@ -627,8 +621,7 @@ func getDaoTemplate() string {
 			func CountByGen(gen *generator.Generator) (int64, error) {
 				sqlStr, params, err := gen.CountSql(true)
 				if err != nil {
-					err = errors.WithStack(err)
-					return 0,err
+					return 0,errors.WithStack(err)
 				}
 				return CountBySql(sqlStr, params)
 				
@@ -641,8 +634,7 @@ func getDaoTemplate() string {
 				}
 				count, err := ds.PrepareCount(sqlStr, params)
 				if err != nil {
-					err = errors.WithStack(err)
-					return 0,err
+					return 0,errors.WithStack(err)
 				}
 				return count,nil
 			}
@@ -651,8 +643,7 @@ func getDaoTemplate() string {
 			func QueryByGen(gen *generator.Generator) ([]model.{{.TableNameUpperCamel}}Model, error) {
 				sqlStr, params, err := gen.SelectSql(true)
 				if err != nil {
-					err = errors.WithStack(err)
-					return nil,err
+					return nil,errors.WithStack(err)
 				}
 				return QueryBySql(sqlStr, params)
 			}
@@ -664,8 +655,7 @@ func getDaoTemplate() string {
 				}
 				maps,err := ds.PrepareQuery(sqlStr, params)
 				if err != nil {
-					err = errors.WithStack(err)
-					return nil,err
+					return nil,errors.WithStack(err)
 				}
 				{{.TableNameLowerCamel}}s := model.SliceToStructs(maps)
 				return {{.TableNameLowerCamel}}s,nil
@@ -676,8 +666,7 @@ func getDaoTemplate() string {
 			func QueryExtendByGen(gen *generator.Generator) ([]model.{{.TableNameUpperCamel}}Extend, error) {
 				sqlStr, params, err := gen.SelectSql(true)
 				if err != nil {
-					err = errors.WithStack(err)
-					return nil,err
+					return nil,errors.WithStack(err)
 				}
 				return QueryExtendBySql(sqlStr, params)
 			}
@@ -689,8 +678,7 @@ func getDaoTemplate() string {
 				}
 				maps,err := ds.PrepareQuery(sqlStr, params)
 				if err != nil {
-					err = errors.WithStack(err)
-					return nil,err
+					return nil,errors.WithStack(err)
 				}
 				{{.TableNameLowerCamel}}Extends := model.SliceToExtStructs(maps)
 				return {{.TableNameLowerCamel}}Extends,nil
@@ -704,8 +692,7 @@ func getDaoTemplate() string {
 			func InsertByGen(gen *generator.Generator) (int64, error) {
 				sqlStr, params, err := gen.InsertSql(true)
 				if err != nil {
-					err = errors.WithStack(err)
-					return 0, err
+					return 0, errors.WithStack(err)
 				}
 				return InsertBySql(sqlStr, params)
 			}
@@ -717,8 +704,7 @@ func getDaoTemplate() string {
 				}
 				id, err := ds.PrepareInsert(sqlStr, params)
 				if err != nil {
-					err = errors.WithStack(err)
-					return 0, err
+					return 0, errors.WithStack(err)
 				}
 				return id, nil
 			}
@@ -746,8 +732,7 @@ func getDaoTemplate() string {
 			func UpdateByGen(gen *generator.Generator) (int64, error) {
 				sqlStr, params, err := gen.UpdateSql(true)
 				if err != nil {
-					err = errors.WithStack(err)
-					return 0, err
+					return 0, errors.WithStack(err)
 				}
 				return UpdateBySql(sqlStr, params)
 			}
@@ -759,8 +744,7 @@ func getDaoTemplate() string {
 				}
 				count, err := ds.PrepareUpdate(sqlStr, params)
 				if err != nil {
-					err = errors.WithStack(err)
-					return 0, err
+					return 0, errors.WithStack(err)
 				}
 				return count, nil
 			}
@@ -799,8 +783,7 @@ func getDaoTemplate() string {
 				{{ end -}}
 				sqlStr, params, err := gen.DeleteSql(true)
 				if err != nil {
-					err = errors.WithStack(err)
-					return 0, err
+					return 0, errors.WithStack(err)
 				}
 				return DeleteBySql(sqlStr, params)
 			}
@@ -810,8 +793,7 @@ func getDaoTemplate() string {
 				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, primaryKeys))
 				sqlStr, params, err := gen.DeleteSql(true)
 				if err != nil {
-					err = errors.WithStack(err)
-					return 0, err
+					return 0, errors.WithStack(err)
 				}
 				return DeleteBySql(sqlStr, params)
 			}
@@ -819,8 +801,7 @@ func getDaoTemplate() string {
 			func DeleteByGen(gen *generator.Generator) (int64, error) {
 				sqlStr, params, err := gen.DeleteSql(true)
 				if err != nil {
-					err = errors.WithStack(err)
-					return 0, err
+					return 0, errors.WithStack(err)
 				}
 				return DeleteBySql(sqlStr, params)
 			}
@@ -831,8 +812,7 @@ func getDaoTemplate() string {
 				}
 				count, err := ds.PrepareDelete(sqlStr, params)
 				if err != nil {
-					err = errors.WithStack(err)
-					return 0, err
+					return 0, errors.WithStack(err)
 				}
 				return count, nil
 			}`
