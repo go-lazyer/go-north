@@ -130,12 +130,13 @@ func (s *Generator) CountSql(prepare bool) (string, []any, error) {
 	var sql bytes.Buffer
 	sql.WriteString("select ")
 
-	if s.columns == nil {
-		sql.WriteString(" count(*) count  ")
-	} else {
-		sql.WriteString(strings.Join(s.columns, ","))
+	result := " count(*) count  "
+	if s.columns != nil && len(s.columns) > 0 {
+		result = strings.Join(s.columns, ",")
 	}
+	// if(strings.ContainsRune())
 
+	sql.WriteString(result)
 	sql.WriteString(" from  " + s.tableName + "")
 
 	if s.tableAlias != "" {
@@ -264,11 +265,11 @@ func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
 		if s.pageNum > 0 {
 			s.pageStart = (s.pageNum - 1) * s.pageSize
 		}
-		params = append(params, s.pageStart, s.pageSize)
+		params = append(params, s.pageSize, s.pageStart)
 		if prepare {
-			sql.WriteString(fmt.Sprintf(" limit %s,%s", PLACE_HOLDER_GO, PLACE_HOLDER_GO))
+			sql.WriteString(fmt.Sprintf(" limit %s offset %s", PLACE_HOLDER_GO, PLACE_HOLDER_GO))
 		} else {
-			sql.WriteString(fmt.Sprintf(" limit %d,%d", s.pageStart, s.pageSize))
+			sql.WriteString(fmt.Sprintf(" limit %d offset %d", s.pageSize, s.pageStart))
 		}
 	}
 
