@@ -619,7 +619,7 @@ func getDaoTemplate() string {
 			{{end}}
 			// count by gen
 			func CountByGen(gen *generator.Generator) (int64, error) {
-				sqlStr, params, err := gen.CountSql(true)
+				sqlStr, params, err := gen.(true)
 				if err != nil {
 					return 0,errors.WithStack(err)
 				}
