@@ -159,15 +159,16 @@ func (s *Generator) CountSql(prepare bool) (string, []any, error) {
 	}
 
 	if s.querys != nil && len(s.querys) > 0 {
-		var source string
-		var param []any
 		n := 0
 		table := s.tableName
 		if s.tableAlias != "" {
 			table = s.tableAlias
 		}
 		for _, query := range s.querys {
-			source, param, _ = query.Source(table, prepare)
+			source, param, err := query.Source(table, prepare)
+			if err != nil {
+				return "", nil, err
+			}
 			if source == "" {
 				continue
 			}
@@ -220,15 +221,19 @@ func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
 	}
 
 	if s.querys != nil && len(s.querys) > 0 {
-		var source string
-		var param []any
 		n := 0
 		table := s.tableName
 		if s.tableAlias != "" {
 			table = s.tableAlias
 		}
 		for _, query := range s.querys {
-			source, param, _ = query.Source(table, prepare)
+			if query == nil {
+				continue
+			}
+			source, param, err := query.Source(table, prepare)
+			if err != nil {
+				return "", nil, err
+			}
 			if source == "" {
 				continue
 			}
