@@ -369,7 +369,10 @@ func (q *BoolQuery) Source(table string, prepare bool) (string, []any, error) {
 			if k != 0 {
 				sql.WriteString(" and")
 			}
-			source, param, _ := query.Source(table, prepare)
+			source, param, err := query.Source(table, prepare)
+			if err != nil {
+				return "", params, err
+			}
 			params = append(params, param...)
 			sql.WriteString(" " + source + " ")
 		}
