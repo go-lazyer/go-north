@@ -826,7 +826,7 @@ func getServiceTemplate() string {
 				"{{.ModelPackagePath}}"
 				"{{.ParamPackagePath}}"
 			
-				generator "github.com/go-lazyer/go-generator/sql"
+				generator "github.com/go-lazyer/go-north/sql"
 			)
 
 			{{ if gt (len .PrimaryKeyFields) 0 -}} 
