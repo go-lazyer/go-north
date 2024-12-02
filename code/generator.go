@@ -436,7 +436,7 @@ func getModelTemplate() string {
 	}
 	
 	func SliceToStructs(s []map[string]any) []*{{.TableNameUpperCamel}}Model {
-		slices := make([]{{.TableNameUpperCamel}}Model, 0)
+		slices := make([]*{{.TableNameUpperCamel}}Model, 0)
 		for _, m := range s {
 			slices = append(slices, MapToStruct(m))
 		}
@@ -504,7 +504,7 @@ func getViewTemplate() string {
 	}
 	
 	func ConvertExtend(m *model.{{.TableNameUpperCamel}}Extend) *{{.TableNameUpperCamel}}View {
-		view := Convert(&m.{{.TableNameUpperCamel}}Model)
+		view := Convert(m.{{.TableNameUpperCamel}}Model)
 		return view
 	}
 	func ConvertExtends(extends []model.{{.TableNameUpperCamel}}Extend) []{{.TableNameUpperCamel}}View {
@@ -610,7 +610,7 @@ func getDaoTemplate() string {
 				if {{.TableNameLowerCamel}}s == nil || len({{.TableNameLowerCamel}}s) == 0 {
 					return nil,nil
 				}
-				{{.TableNameLowerCamel}}Map := make(map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, len({{.TableNameLowerCamel}}s))
+				{{.TableNameLowerCamel}}Map := make(map[{{(index .PrimaryKeyFields 0).FieldType}}]*model.{{.TableNameUpperCamel}}Model, len({{.TableNameLowerCamel}}s))
 				for _, {{.TableNameLowerCamel}} := range {{.TableNameLowerCamel}}s {
 					new := {{.TableNameLowerCamel}}
 					{{.TableNameLowerCamel}}Map[{{.TableNameLowerCamel}}.{{(index .PrimaryKeyFields 0).FieldName}}.{{(index .PrimaryKeyFields 0).FieldNullTypeValue}}] = new
@@ -620,7 +620,7 @@ func getDaoTemplate() string {
 			{{end}}
 			// count by gen
 			func CountByGen(gen *generator.Generator) (int64, error) {
-				sqlStr, params, err := gen.(true)
+				sqlStr, params, err := gen.CountSql(true)
 				if err != nil {
 					return 0,errors.WithStack(err)
 				}
