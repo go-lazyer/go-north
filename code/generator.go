@@ -495,10 +495,10 @@ func getViewTemplate() string {
 			{{end}}
 		}
 	}
-	func Converts(models []model.{{.TableNameUpperCamel}}Model) []{{.TableNameUpperCamel}}View {
-		views := make([]{{.TableNameUpperCamel}}View, 0, len(models))
+	func Converts(models []*model.{{.TableNameUpperCamel}}Model) []*{{.TableNameUpperCamel}}View {
+		views := make([]*{{.TableNameUpperCamel}}View, 0, len(models))
 		for _, model := range models {
-			views = append(views, *Convert(&model))
+			views = append(views, Convert(&model))
 		}
 		return views
 	}
@@ -507,10 +507,10 @@ func getViewTemplate() string {
 		view := Convert(m.{{.TableNameUpperCamel}}Model)
 		return view
 	}
-	func ConvertExtends(extends []model.{{.TableNameUpperCamel}}Extend) []{{.TableNameUpperCamel}}View {
-		views := make([]{{.TableNameUpperCamel}}View, 0, len(extends))
+	func ConvertExtends(extends []*model.{{.TableNameUpperCamel}}Extend) []*{{.TableNameUpperCamel}}View {
+		views := make([]*{{.TableNameUpperCamel}}View, 0, len(extends))
 		for _, extend := range extends {
-			views = append(views, *ConvertExtend(&extend))
+			views = append(views, ConvertExtend(extend))
 		}
 		return views
 	}`
