@@ -74,7 +74,8 @@ func (s *Generator) Table(tableName string) *Generator {
 }
 
 // 表的别名
-func (s *Generator) TableAlias(tableAlias string) *Generator {
+func (s *Generator) TableAlias(tableName, tableAlias string) *Generator {
+	s.tableName = tableName
 	s.tableAlias = tableAlias
 	return s
 }
@@ -206,14 +207,22 @@ func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
 
 	if s.joins != nil && len(s.joins) > 0 {
 		for _, join := range s.joins {
-			sql.WriteString(fmt.Sprintf(" %v %v on %v", join.joinType, join.tableName, join.condition))
+			table := join.tableName
+			if s.tableAlias != "" {
+				table = s.tableAlias
+			}
+			if join.tableName != "" {
+				sql.WriteString(fmt.Sprintf(" %v %v %v on %v", join.joinType, join.tableName, join.tableAlias, join.condition))
+			} else {
+				sql.WriteString(fmt.Sprintf(" %v %v on %v", join.joinType, join.tableName, join.condition))
+			}
 			for i, query := range join.querys {
 				if i == 0 {
 					sql.WriteString(" and ")
 				} else {
 					sql.WriteString(" or ")
 				}
-				source, param, _ := query.Source(join.tableName, prepare)
+				source, param, _ := query.Source(table, prepare)
 				sql.WriteString(" " + source + " ")
 				params = append(params, param...)
 			}

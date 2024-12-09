@@ -3,10 +3,11 @@ package generator
 import "fmt"
 
 type Join struct {
-	tableName string
-	condition string
-	joinType  string //inner  left  right
-	querys    []Query
+	tableName  string
+	tableAlias string
+	condition  string
+	joinType   string //inner  left  right
+	querys     []Query
 }
 
 func (s *Join) Where(query ...Query) *Join {
@@ -26,5 +27,12 @@ func NewJoin(from, joinType string) *Join {
 	return &Join{
 		tableName: from,
 		joinType:  joinType,
+	}
+}
+func NewAliasJoin(from, alias, joinType string) *Join {
+	return &Join{
+		tableName:  from,
+		tableAlias: alias,
+		joinType:   joinType,
 	}
 }

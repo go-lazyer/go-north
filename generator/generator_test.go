@@ -52,8 +52,8 @@ func TestGenerator_SelectSql5(t *testing.T) {
 	// select user.id,order.id  from user join order on user.id=order.user_id where user.id='10000'
 	idQuery := NewEqualQuery("id", 1000)
 
-	join := NewJoin("order", INNER_JOIN).Condition("user", "id", "order", "user_id")
-	gen := NewGenerator().Result("user.id", "order.id").Table("user").Join(join).Where(idQuery)
+	join := NewAliasJoin("order", "o", INNER_JOIN).Condition("u", "id", "o", "user_id")
+	gen := NewGenerator().Result("u.id", "o.id").TableAlias("user", "u").Join(join).Where(idQuery)
 	fmt.Println(gen.SelectSql(false))
 }
 
