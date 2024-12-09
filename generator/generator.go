@@ -209,7 +209,7 @@ func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
 		for _, join := range s.joins {
 			table := join.tableName
 			if s.tableAlias != "" {
-				table = s.tableAlias
+				table = join.tableAlias
 			}
 			if join.tableName != "" {
 				sql.WriteString(fmt.Sprintf(" %v %v %v on %v", join.joinType, join.tableName, join.tableAlias, join.condition))
