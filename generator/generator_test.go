@@ -64,6 +64,15 @@ func TestGenerator_SelectSql6(t *testing.T) {
 	fmt.Println(gen.SelectSql(false))
 }
 
+func TestGenerator_SelectSql7(t *testing.T) {
+	// select user.id,order.id  from user join order on user.id=order.user_id and order.create_time>user.create_time where user.id='10000'
+	idQuery := NewEqualQuery("id", 1000)
+
+	join := NewAliasJoin("order", "o", INNER_JOIN).Condition("u", "id", "o", "user_id").Where(NewFieldGreaterThanQuery("o", "create_time", "u", "create_time"))
+	gen := NewGenerator().Result("u.id", "o.id").TableAlias("user", "u").Join(join).Where(idQuery)
+	fmt.Println(gen.SelectSql(true))
+}
+
 func TestGenerator_UpdateSql(t *testing.T) {
 	// update user set age=21,name="lazeyr" where id="10000"
 	query := NewEqualQuery("id", 1000)

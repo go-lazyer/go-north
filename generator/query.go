@@ -317,31 +317,120 @@ func (q *LessThanOrEqualQuery) Source(table string, prepare bool) (string, []any
 }
 
 type FieldEqualQuery struct {
+	firstTable  string
 	firstField  string
+	secondTable string
 	secondField string
 }
 
-func NewFieldEqualQuery(firstField, secondField string) *FieldEqualQuery {
-	return &FieldEqualQuery{firstField: firstField, secondField: secondField}
+func NewFieldEqualQuery(firstTable, firstField, secondTable, secondField string) *FieldEqualQuery {
+	return &FieldEqualQuery{firstTable: firstTable, firstField: firstField, secondTable: secondTable, secondField: secondField}
 }
 
 func (q *FieldEqualQuery) Source(table string, prepare bool) (string, []any, error) {
-	return fmt.Sprintf("%s = %s", q.firstField, q.secondField), []any{}, nil
+	if q.firstTable != "" && q.secondTable != "" {
+		return fmt.Sprintf("%s.%s = %s.%s", q.firstTable, q.firstField, q.secondTable, q.secondField), []any{}, nil
+	} else {
+		return fmt.Sprintf("%s.%s = %s.%s", table, q.firstField, table, q.secondField), []any{}, nil
+	}
 }
 
 type FieldNotEqualQuery struct {
+	firstTable  string
 	firstField  string
+	secondTable string
 	secondField string
 }
 
-func NewFieldNotEqualQuery(firstField, secondField string) *FieldNotEqualQuery {
-	return &FieldNotEqualQuery{firstField: firstField, secondField: secondField}
+func NewFieldNotEqualQuery(firstTable, firstField, secondTable, secondField string) *FieldNotEqualQuery {
+	return &FieldNotEqualQuery{firstTable: firstTable, firstField: firstField, secondTable: secondTable, secondField: secondField}
 }
 
 func (q *FieldNotEqualQuery) Source(table string, prepare bool) (string, []any, error) {
-	return fmt.Sprintf("%s != %s", q.firstField, q.secondField), []any{}, nil
+	if q.firstTable != "" && q.secondTable != "" {
+		return fmt.Sprintf("%s.%s != %s.%s", q.firstTable, q.firstField, q.secondTable, q.secondField), []any{}, nil
+	} else {
+		return fmt.Sprintf("%s.%s != %s.%s", table, q.firstField, table, q.secondField), []any{}, nil
+	}
 }
 
+type FieldGreaterThanQuery struct {
+	firstTable  string
+	firstField  string
+	secondTable string
+	secondField string
+}
+
+func NewFieldGreaterThanQuery(firstTable, firstField, secondTable, secondField string) *FieldGreaterThanQuery {
+	return &FieldGreaterThanQuery{firstTable: firstTable, firstField: firstField, secondTable: secondTable, secondField: secondField}
+}
+
+func (q *FieldGreaterThanQuery) Source(table string, prepare bool) (string, []any, error) {
+	if q.firstTable != "" && q.secondTable != "" {
+		return fmt.Sprintf("%s.%s > %s.%s", q.firstTable, q.firstField, q.secondTable, q.secondField), []any{}, nil
+	} else {
+		return fmt.Sprintf("%s.%s > %s.%s", table, q.firstField, table, q.secondField), []any{}, nil
+	}
+}
+
+type FieldGreaterThanOrEqualQuery struct {
+	firstTable  string
+	firstField  string
+	secondTable string
+	secondField string
+}
+
+func NewFieldGreaterThanOrEqualQuery(firstTable, firstField, secondTable, secondField string) *FieldGreaterThanOrEqualQuery {
+	return &FieldGreaterThanOrEqualQuery{firstTable: firstTable, firstField: firstField, secondTable: secondTable, secondField: secondField}
+}
+
+func (q *FieldGreaterThanOrEqualQuery) Source(table string, prepare bool) (string, []any, error) {
+	if q.firstTable != "" && q.secondTable != "" {
+		return fmt.Sprintf("%s.%s >= %s.%s", q.firstTable, q.firstField, q.secondTable, q.secondField), []any{}, nil
+	} else {
+		return fmt.Sprintf("%s.%s >= %s.%s", table, q.firstField, table, q.secondField), []any{}, nil
+	}
+}
+
+type FieldLessThanQuery struct {
+	firstTable  string
+	firstField  string
+	secondTable string
+	secondField string
+}
+
+func NewFieldLessThanQuery(firstTable, firstField, secondTable, secondField string) *FieldLessThanQuery {
+	return &FieldLessThanQuery{firstTable: firstTable, firstField: firstField, secondTable: secondTable, secondField: secondField}
+}
+
+func (q *FieldLessThanQuery) Source(table string, prepare bool) (string, []any, error) {
+	if q.firstTable != "" && q.secondTable != "" {
+		return fmt.Sprintf("%s.%s < %s.%s", q.firstTable, q.firstField, q.secondTable, q.secondField), []any{}, nil
+	} else {
+		return fmt.Sprintf("%s.%s < %s.%s", table, q.firstField, table, q.secondField), []any{}, nil
+	}
+}
+
+type FieldLessThanOrEqualQuery struct {
+	firstTable  string
+	firstField  string
+	secondTable string
+	secondField string
+}
+
+func NewFieldLessThanOrEqualQuery(firstTable, firstField, secondTable, secondField string) *FieldLessThanOrEqualQuery {
+	return &FieldLessThanOrEqualQuery{firstTable: firstTable, firstField: firstField, secondTable: secondTable, secondField: secondField}
+}
+
+func (q *FieldLessThanOrEqualQuery) Source(table string, prepare bool) (string, []any, error) {
+	if q.firstTable != "" && q.secondTable != "" {
+		return fmt.Sprintf("%s.%s <= %s.%s", q.firstTable, q.firstField, q.secondTable, q.secondField), []any{}, nil
+	} else {
+		return fmt.Sprintf("%s.%s <= %s.%s", table, q.firstField, table, q.secondField), []any{}, nil
+	}
+}
+
+// field end
 type BoolQuery struct {
 	query []Query
 }
