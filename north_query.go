@@ -1,11 +1,11 @@
-package generator
+package north
 
 import (
 	"bytes"
 	"fmt"
 )
 
-type Query interface {
+type BaseQuery interface {
 	Source(table string, prepare bool) (string, []any, error)
 }
 
@@ -432,16 +432,16 @@ func (q *FieldLessThanOrEqualQuery) Source(table string, prepare bool) (string, 
 
 // field end
 type BoolQuery struct {
-	query []Query
+	query []BaseQuery
 }
 
 func NewBoolQuery() *BoolQuery {
 	return &BoolQuery{
-		query: make([]Query, 0),
+		query: make([]BaseQuery, 0),
 	}
 }
 
-func (q *BoolQuery) And(queries ...Query) *BoolQuery {
+func (q *BoolQuery) And(queries ...BaseQuery) *BoolQuery {
 	q.query = append(q.query, queries...)
 	return q
 }
@@ -468,4 +468,27 @@ func (q *BoolQuery) Source(table string, prepare bool) (string, []any, error) {
 	}
 	sql.WriteString(")")
 	return sql.String(), params, nil
+}
+func IsNumberType(inter any) bool {
+	if inter == nil {
+		return false
+	}
+	switch inter.(type) {
+	case int:
+		return true
+	case int8:
+		return true
+	case int16:
+		return true
+	case int32:
+		return true
+	case int64:
+		return true
+	case float32:
+		return true
+	case float64:
+		return true
+	default:
+		return false
+	}
 }

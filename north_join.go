@@ -1,4 +1,4 @@
-package generator
+package north
 
 import "fmt"
 
@@ -7,12 +7,12 @@ type Join struct {
 	tableAlias string
 	condition  string
 	joinType   string //inner  left  right
-	querys     []Query
+	querys     []BaseQuery
 }
 
-func (s *Join) Where(query ...Query) *Join {
+func (s *Join) Where(query ...BaseQuery) *Join {
 	if s.querys == nil {
-		s.querys = make([]Query, 0)
+		s.querys = make([]BaseQuery, 0)
 	}
 	s.querys = append(s.querys, query...)
 	return s

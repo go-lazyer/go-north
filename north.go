@@ -1,293 +1,464 @@
 package north
 
 import (
-	"database/sql"
+	"bytes"
 	"errors"
 	"fmt"
-	"reflect"
 	"strings"
 )
 
 const (
-	DRIVER_NAME_POSTGRES = "postgres"
-	DRIVER_NAME_MYSQL    = "mysql"
-	PLACE_HOLDER_GO      = "ⒼⓄ" //
+	INNER_JOIN = "inner join" // inner  join
+	LEFT_JOIN  = "left join"  // left  join
+	RIGHT_JOIN = "right join" // right join
 )
 
-type DataSource struct {
-	Db           *sql.DB
-	DriverName   string
-	DaoFilePaths []string
-}
-type Config struct {
-	MaxOpenConns int
-	MaxIdleConns int
-}
-
-func Open(driverName string, dsn string, config *Config) (*DataSource, error) {
-	db, err := sql.Open(driverName, dsn)
-	if err != nil {
-		return nil, err
-	}
-	err = db.Ping()
-	if err != nil {
-		return nil, err
-	}
-	db.SetMaxOpenConns(config.MaxOpenConns)
-	db.SetMaxIdleConns(config.MaxIdleConns)
-
-	return &DataSource{
-		Db:         db,
-		DriverName: driverName,
-	}, nil
+type North struct {
+	orderBy    []string //排序字段
+	groupBy    []string //分组字段
+	pageStart  int
+	pageSize   int
+	pageNum    int
+	querys     []BaseQuery
+	update     map[string]any
+	updates    []map[string]any
+	insert     map[string]any
+	inserts    []map[string]any
+	joins      []*Join
+	tableName  string
+	tableAlias string
+	primary    string //主键
+	columns    []string
 }
 
-func Count(sql string, params []any, ds *DataSource) (int64, error) {
-	if ds.Db == nil {
-		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
-	}
-	rows, err := ds.Db.Query(sql, params...)
-	if err != nil {
-		return 0, err
-	}
-	defer rows.Close()
-
-	var count int64
-	for rows.Next() {
-		err := rows.Scan(&count)
-		if err != nil {
-			return 0, err
-		}
-	}
-	return count, nil
+func NewNorth() *North {
+	return new(North)
 }
 
-func PrepareCount(sql string, params []any, ds *DataSource) (int64, error) {
-	if ds.Db == nil {
-		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
+func (s *North) Where(query ...BaseQuery) *North {
+	if s.querys == nil {
+		s.querys = make([]BaseQuery, 0)
 	}
-	sql = prepareConvert(sql, ds.DriverName)
-
-	stmt, err := ds.Db.Prepare(sql)
-	if err != nil {
-		return 0, err
-	}
-	defer stmt.Close()
-	rows, err := stmt.Query(params...)
-	if err != nil {
-		return 0, err
-	}
-	defer rows.Close()
-
-	var count int64
-	for rows.Next() {
-		err := rows.Scan(&count)
-		if err != nil {
-			return 0, err
-		}
-	}
-	return count, nil
+	s.querys = append(s.querys, query...)
+	return s
 }
 
-// 普通查询
-func Query[T any](sql string, params []any, ds *DataSource) ([]T, error) {
-	if ds.Db == nil {
-		return nil, errors.New("db not allowed to be nil,need to instantiate yourself")
-	}
-	rows, err := ds.Db.Query(sql, params...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	return RowsToStruct[T](rows)
+func (s *North) Update(m map[string]any) *North {
+	s.update = m
+	return s
+}
+func (s *North) Updates(m []map[string]any) *North {
+	s.updates = m
+	return s
+}
+func (s *North) Insert(m map[string]any) *North {
+	s.insert = m
+	return s
+}
+func (s *North) Inserts(m []map[string]any) *North {
+	s.inserts = m
+	return s
 }
 
-// 预处理查询func RowsToStruct[T any](rows *sql.Rows) ([]T, error) {
-func PrepareQuery[T any](sql string, params []any, ds *DataSource) ([]T, error) {
-	if ds.Db == nil {
-		return nil, errors.New("db not allowed to be nil,need to instantiate yourself")
+func (s *North) Join(join ...*Join) *North {
+	if s.joins == nil {
+		s.joins = make([]*Join, 0)
 	}
-	sql = prepareConvert(sql, ds.DriverName)
-	stmt, err := ds.Db.Prepare(sql)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-	rows, err := stmt.Query(params...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	return RowsToStruct[T](rows)
+	s.joins = append(s.joins, join...)
+	return s
+}
+func (s *North) Table(tableName string) *North {
+	s.tableName = tableName
+	return s
 }
 
-// 预处理插入 返回批量自增ID
-func PrepareInsert(sql string, params []any, ds *DataSource) (int64, error) {
-	if ds.Db == nil {
-		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
+// 表的别名
+func (s *North) TableAlias(tableName, tableAlias string) *North {
+	s.tableName = tableName
+	s.tableAlias = tableAlias
+	return s
+}
+func (s *North) Primary(primary string) *North {
+	s.primary = primary
+	return s
+}
+func (s *North) Result(columns ...string) *North {
+	s.columns = columns
+	return s
+}
+func (s *North) PageNum(pageNum int) *North {
+	s.pageNum = pageNum
+	return s
+}
+func (s *North) PageStart(pageStart int) *North {
+	s.pageStart = pageStart
+	return s
+}
+func (s *North) PageSize(pageSize int) *North {
+	s.pageSize = pageSize
+	return s
+}
+func (s *North) OrderBy(orderBy []string) *North {
+	s.orderBy = orderBy
+	return s
+}
+func (s *North) AddOrderBy(name string, orderByType string) *North {
+	if s.orderBy == nil {
+		s.orderBy = make([]string, 0)
 	}
-	sql = prepareConvert(sql, ds.DriverName)
-	stmt, err := ds.Db.Prepare(sql)
-	if err != nil {
-		return 0, err
-	}
-	defer stmt.Close()
-	ret, err := stmt.Exec(params...)
-	if err != nil {
-		return 0, err
-	}
-	id, err := ret.LastInsertId() // 新插入数据的id
-	if err != nil {
-		return 0, err
-	}
-	return id, nil
+	s.orderBy = append(s.orderBy, name+" "+orderByType)
+	return s
 }
 
-func PrepareUpdate(sql string, params []any, ds *DataSource) (int64, error) {
-	if ds.Db == nil {
-		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
-	}
-	sql = prepareConvert(sql, ds.DriverName)
-	ret, err := ds.Db.Exec(sql, params...)
-	if err != nil {
-		return 0, err
-	}
-	n, err := ret.RowsAffected() // 操作影响的行数
-	if err != nil {
-		return 0, err
-	}
-	return n, nil
+func (s *North) GroupBy(groupBy []string) *North {
+	s.groupBy = groupBy
+	return s
 }
-func PrepareSave(sql string, params []any, ds *DataSource) (int64, error) {
-	if ds.Db == nil {
-		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
+func (s *North) AddGroupBy(tableName, name string) *North {
+	if s.groupBy == nil {
+		s.groupBy = make([]string, 0)
 	}
-	sql = prepareConvert(sql, ds.DriverName)
-	ret, err := ds.Db.Exec(sql, params...)
-	if err != nil {
-		return 0, err
-	}
-	n, err := ret.RowsAffected() // 操作影响的行数
-	if err != nil {
-		return 0, err
-	}
-	return n, nil
-}
-func PrepareDelete(sql string, params []any, ds *DataSource) (int64, error) {
-	if ds.Db == nil {
-		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
-	}
-	sql = prepareConvert(sql, ds.DriverName)
-	ret, err := ds.Db.Exec(sql, params...)
-	if err != nil {
-		return 0, err
-	}
-	n, err := ret.RowsAffected() // 操作影响的行数
-	if err != nil {
-		return 0, err
-	}
-	return n, nil
+	s.groupBy = append(s.groupBy, tableName+"."+name)
+	return s
 }
 
-// 把查询结果映射为实体
-func RowsToStruct[T any](rows *sql.Rows) ([]T, error) {
-	//创建一个切片的类型
-	sliceType := reflect.SliceOf(reflect.TypeOf(new(T)).Elem())
-	//创建一个具有给定长度和容量的切片
-	sliceValue := reflect.MakeSlice(sliceType, 0, 0)
+func (s *North) CountSql(prepare bool) (string, []any, error) {
+	if s.tableName == "" {
+		return "", nil, errors.New("tableName cannot be empty")
+	}
+	params := make([]any, 0, 10)
+	var sql bytes.Buffer
+	sql.WriteString("select ")
 
-	columns, err := rows.Columns()
-	if err != nil {
-		return nil, err
+	result := " count(*) count  "
+	// if s.columns != nil && len(s.columns) > 0 {
+	// 	result = strings.Join(s.columns, ",")
+	// }
+
+	sql.WriteString(result)
+	sql.WriteString(" from  " + s.tableName + "")
+
+	if s.tableAlias != "" {
+		sql.WriteString(" " + s.tableAlias + " ")
 	}
 
-	// 构建字段到列索引的映射
-	fieldToColIndex := make(map[string]int)
-	structType := reflect.TypeOf(new(T)).Elem()
-	for i, columnName := range columns {
-		for j := 0; j < structType.NumField(); j++ {
-			field := structType.Field(j)
-			if tagValue, ok := getFieldTagValue(field, "orm"); ok && tagValue == columnName {
-				fieldToColIndex[field.Name] = i
-				break
+	if s.joins != nil && len(s.joins) > 0 {
+		for _, join := range s.joins {
+			sql.WriteString(fmt.Sprintf(" %v %v on %v", join.joinType, join.tableName, join.condition))
+			for i, query := range join.querys {
+				if i == 0 {
+					sql.WriteString(" and ")
+				} else {
+					sql.WriteString(" or ")
+				}
+				source, param, _ := query.Source(join.tableName, prepare)
+				sql.WriteString(" " + source + " ")
+				params = append(params, param...)
 			}
 		}
 	}
 
-	for rows.Next() {
-		var elem T
-		elemValue := reflect.ValueOf(&elem).Elem()
-		scanArgs := make([]any, len(columns))
-		for columnName, colIndex := range fieldToColIndex {
-			field := elemValue.FieldByName(columnName)
-			if !field.IsValid() {
-				return nil, fmt.Errorf("field %s not found in type %T", columnName, elem)
+	if s.querys != nil && len(s.querys) > 0 {
+		n := 0
+		table := s.tableName
+		if s.tableAlias != "" {
+			table = s.tableAlias
+		}
+		for _, query := range s.querys {
+			source, param, err := query.Source(table, prepare)
+			if err != nil {
+				return "", nil, err
 			}
-			scanArgs[colIndex] = field.Addr().Interface()
-		}
-
-		if err := rows.Scan(scanArgs...); err != nil {
-			return nil, err
-		}
-		sliceValue = reflect.Append(sliceValue, elemValue)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return sliceValue.Interface().([]T), nil
-}
-
-// getFieldTagValue 获取结构体字段的tag值
-func getFieldTagValue(field reflect.StructField, tagName string) (string, bool) {
-	if tag, ok := field.Tag.Lookup(tagName); ok {
-		parts := strings.Split(tag, ",")
-		return parts[0], true
-	}
-	return "", false
-}
-func RowsToMapSlice(rows *sql.Rows) ([]map[string]any, error) {
-	columns, err := rows.Columns()
-	if err != nil {
-		return nil, err
-	}
-	results := make([]map[string]any, 0)
-	values := make([]any, len(columns))
-	scanArgs := make([]any, len(values))
-	for i := range values {
-		scanArgs[i] = &values[i]
-	}
-
-	for rows.Next() {
-		rowMap := make(map[string]any)
-		err := rows.Scan(scanArgs...)
-		if err != nil {
-			return nil, err
-		}
-
-		for i, col := range columns {
-			var value any = values[i]
-			if b, ok := value.([]byte); ok {
-				value = string(b)
+			if source == "" {
+				continue
 			}
-			rowMap[col] = value
+			if n == 0 {
+				sql.WriteString(" where   ")
+			} else {
+				sql.WriteString(" or ")
+			}
+			sql.WriteString(" " + source + " ")
+			params = append(params, param...)
+			n = n + 1
 		}
-		results = append(results, rowMap)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return results, nil
+	return sql.String(), params, nil
 }
-func prepareConvert(sqlStr, driverName string) string {
-	if driverName == DRIVER_NAME_MYSQL {
-		return strings.ReplaceAll(sqlStr, PLACE_HOLDER_GO, "?")
+
+func (s *North) SelectSql(prepare bool) (string, []any, error) {
+	if s.tableName == "" {
+		return "", nil, errors.New("tableName cannot be empty")
 	}
-	n := 1
-	for strings.Index(sqlStr, PLACE_HOLDER_GO) > 0 {
-		sqlStr = strings.Replace(sqlStr, PLACE_HOLDER_GO, fmt.Sprintf("$%v", n), 1)
-		n = n + 1
+	params := make([]any, 0)
+	var sql bytes.Buffer
+	sql.WriteString("select ")
+	if s.columns == nil {
+		sql.WriteString(" * ")
+	} else {
+		sql.WriteString(strings.Join(s.columns, ","))
 	}
-	return sqlStr
+	sql.WriteString(" from  " + s.tableName + "")
+
+	if s.tableAlias != "" {
+		sql.WriteString(" " + s.tableAlias + " ")
+	}
+
+	if s.joins != nil && len(s.joins) > 0 {
+		for _, join := range s.joins {
+			table := join.tableName
+			if s.tableAlias != "" {
+				table = join.tableAlias
+			}
+			if join.tableName != "" {
+				sql.WriteString(fmt.Sprintf(" %v %v %v on %v", join.joinType, join.tableName, join.tableAlias, join.condition))
+			} else {
+				sql.WriteString(fmt.Sprintf(" %v %v on %v", join.joinType, join.tableName, join.condition))
+			}
+			for i, query := range join.querys {
+				if i == 0 {
+					sql.WriteString(" and ")
+				} else {
+					sql.WriteString(" or ")
+				}
+				source, param, _ := query.Source(table, prepare)
+				sql.WriteString(" " + source + " ")
+				params = append(params, param...)
+			}
+		}
+	}
+
+	if s.querys != nil && len(s.querys) > 0 {
+		n := 0
+		table := s.tableName
+		if s.tableAlias != "" {
+			table = s.tableAlias
+		}
+		for _, query := range s.querys {
+			if query == nil {
+				continue
+			}
+			source, param, err := query.Source(table, prepare)
+			if err != nil {
+				return "", nil, err
+			}
+			if source == "" {
+				continue
+			}
+			if n == 0 {
+				sql.WriteString(" where   ")
+			} else {
+				sql.WriteString(" or ")
+			}
+			sql.WriteString(" " + source + " ")
+			params = append(params, param...)
+			n = n + 1
+		}
+	}
+	if s.groupBy != nil && len(s.groupBy) > 0 {
+		sql.WriteString(" group by   ")
+		for n, v := range s.groupBy {
+			if n != 0 {
+				sql.WriteString(", ")
+			}
+			sql.WriteString(v)
+		}
+	}
+	if s.orderBy != nil && len(s.orderBy) > 0 {
+		sql.WriteString(" order by   ")
+		for n, v := range s.orderBy {
+			if n != 0 {
+				sql.WriteString(", ")
+			}
+			sql.WriteString(v)
+		}
+	}
+	if s.pageSize > 0 {
+		if s.pageNum > 0 {
+			s.pageStart = (s.pageNum - 1) * s.pageSize
+		}
+		params = append(params, s.pageSize, s.pageStart)
+		if prepare {
+			sql.WriteString(fmt.Sprintf(" limit %s offset %s", PLACE_HOLDER_GO, PLACE_HOLDER_GO))
+		} else {
+			sql.WriteString(fmt.Sprintf(" limit %d offset %d", s.pageSize, s.pageStart))
+		}
+	}
+
+	return sql.String(), params, nil
+}
+
+func (s *North) DeleteSql(prepare bool) (string, []any, error) {
+	if s.tableName == "" {
+		return "", nil, errors.New("tableName cannot be empty")
+	}
+	if s.querys == nil || len(s.querys) != 1 {
+		return "", nil, errors.New("the querys size must be 1")
+	}
+	params := make([]any, 0, 10)
+	var sql bytes.Buffer
+	sql.WriteString("delete from " + s.tableName + " ")
+
+	sql.WriteString(" where   ")
+	for i, query := range s.querys {
+		if i != 0 {
+			sql.WriteString(" or ")
+		}
+		source, param, _ := query.Source(s.tableName, prepare)
+		sql.WriteString(" " + source + " ")
+		params = append(params, param...)
+	}
+
+	return sql.String(), params, nil
+}
+func (s *North) InsertSql(prepare bool) (string, []any, error) {
+
+	if s.tableName == "" {
+		return "", nil, errors.New("tableName  cannot be empty")
+	}
+	n := 0
+	params := make([]any, 0)
+	fields := make([]string, 0)
+	var sql bytes.Buffer
+	sql.WriteString("insert into " + s.tableName + " ")
+	sql.WriteString("(")
+	if s.inserts != nil && len(s.inserts) > 0 {
+		//把所有要修改的字段提取出来
+
+		for field, _ := range s.inserts[0] {
+			fields = append(fields, field)
+		}
+
+		for _, field := range fields {
+			if n != 0 {
+				sql.WriteString(",")
+			}
+			sql.WriteString(" " + field + " ")
+			n++
+		}
+		sql.WriteString(") values")
+		n = 0
+
+		for _, maps := range s.inserts {
+			if n != 0 {
+				sql.WriteString(",")
+			}
+			sql.WriteString("(")
+			m := 0
+			for _, field := range fields {
+				if m != 0 {
+					sql.WriteString(",")
+				}
+				params = append(params, maps[field])
+				if prepare {
+					sql.WriteString(fmt.Sprintf(" %s ", PLACE_HOLDER_GO))
+				} else {
+					sql.WriteString(fmt.Sprintf(" '%v' ", maps[field]))
+				}
+				m++
+			}
+			sql.WriteString(")")
+			n++
+		}
+	} else {
+		for field, _ := range s.insert {
+			fields = append(fields, field)
+		}
+		for _, field := range fields {
+			if n != 0 {
+				sql.WriteString(",")
+			}
+			sql.WriteString(" " + field + " ")
+			n++
+		}
+		sql.WriteString(") values")
+		n = 0
+		sql.WriteString("(")
+		m := 0
+		for _, field := range fields {
+			if m != 0 {
+				sql.WriteString(",")
+			}
+			params = append(params, s.insert[field])
+			if prepare {
+				sql.WriteString(fmt.Sprintf(" %s ", PLACE_HOLDER_GO))
+			} else {
+				sql.WriteString(fmt.Sprintf(" '%v' ", s.insert[field]))
+			}
+			m++
+		}
+		sql.WriteString(")")
+	}
+
+	return sql.String(), params, nil
+}
+
+func (s *North) UpdateSql(prepare bool) (string, []any, error) {
+
+	if s.tableName == "" {
+		return "", nil, errors.New("tableName  cannot be empty")
+	}
+
+	if s.querys == nil || len(s.querys) != 1 {
+		return "", nil, errors.New("the querys size must be 1")
+	}
+
+	params := make([]any, 0, 10)
+	var sql bytes.Buffer
+	sql.WriteString("update " + s.tableName + " set ")
+	n := 0
+	if s.updates != nil && len(s.updates) > 0 { //批量更新
+
+		if s.primary == "" {
+			return "", nil, errors.New("primary cannot be empty")
+		}
+
+		//把所有要修改的字段提取出来
+		fields := make(map[string]string)
+		for _, setMap := range s.updates {
+			for name, _ := range setMap {
+				fields[name] = ""
+			}
+		}
+
+		for field, _ := range fields {
+			if n != 0 {
+				sql.WriteString(",")
+			}
+			sql.WriteString(fmt.Sprintf("%v = CASE %v", field, s.primary))
+			for _, setMap := range s.updates {
+				v, ok := setMap[field]
+				if !ok {
+					continue
+				}
+				params = append(params, setMap[s.primary], v)
+				if prepare {
+					sql.WriteString(fmt.Sprintf(" WHEN %s THEN %s", PLACE_HOLDER_GO, PLACE_HOLDER_GO))
+				} else {
+					sql.WriteString(fmt.Sprintf(" WHEN '%v' THEN '%v'", setMap[s.primary], v))
+				}
+			}
+			sql.WriteString(" END ")
+			n++
+		}
+	} else { //单个更新
+		for name, value := range s.update {
+			if n != 0 {
+				sql.WriteString(",")
+			}
+			if prepare {
+				sql.WriteString(fmt.Sprintf("%v=%s", name, PLACE_HOLDER_GO))
+			} else {
+				sql.WriteString(fmt.Sprintf("%v='%v'", name, value))
+			}
+			params = append(params, value)
+			n++
+		}
+	}
+
+	source, param, _ := s.querys[0].Source(s.tableName, prepare)
+	sql.WriteString(" where " + source + " ")
+	params = append(params, param...)
+
+	return sql.String(), params, nil
 }

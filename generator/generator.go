@@ -1,465 +1,869 @@
 package generator
 
 import (
-	"bytes"
+	"database/sql"
 	"errors"
 	"fmt"
+	"os"
+	"os/exec"
 	"strings"
-)
+	"text/template"
 
-const (
-	INNER_JOIN      = "inner join" // inner  join
-	LEFT_JOIN       = "left join"  // left  join
-	RIGHT_JOIN      = "right join" // right join
-	PLACE_HOLDER_GO = "ⒼⓄ"         //
+	"time"
 )
 
 type Generator struct {
-	orderBy    []string //排序字段
-	groupBy    []string //分组字段
-	pageStart  int
-	pageSize   int
-	pageNum    int
-	querys     []Query
-	update     map[string]any
-	updates    []map[string]any
-	insert     map[string]any
-	inserts    []map[string]any
-	joins      []*Join
-	tableName  string
-	tableAlias string
-	primary    string //主键
-	columns    []string
+	dsn        string
+	project    string
+	driverName string
 }
 
 func NewGenerator() *Generator {
-	return new(Generator)
+	return &Generator{}
+}
+func (gen *Generator) Dsn(dsn string) *Generator {
+	gen.dsn = dsn
+	return gen
+}
+func (gen *Generator) DriverName(driverName string) *Generator {
+	gen.driverName = driverName
+	return gen
+}
+func (gen *Generator) Project(project string) *Generator {
+	gen.project = project
+	return gen
 }
 
-func (s *Generator) Where(query ...Query) *Generator {
-	if s.querys == nil {
-		s.querys = make([]Query, 0)
+type Module struct {
+	TableName           string //表名
+	TableNameUpperCamel string //表名的大驼峰
+	TableNameLowerCamel string //表名的小驼峰
+	ModulePath          string //模块名用于生成文件名
+	Fields              []Field
+	PrimaryKeyFields    []Field //主键
+	Model               bool
+	ModelFilePath       string //全路径，不包含文件名
+	ModelFileName       string //只有文件名
+	ModelPackageName    string //只有包名，不包含文件名
+	ModelPackagePath    string //包含完整的包名
+
+	Extend            bool
+	ExtendFilePath    string //全路径，不包含文件名
+	ExtendFileName    string //只有文件名
+	ExtendPackageName string //只有包名，不包含文件名
+	ExtendPackagePath string //包含完整的包名
+
+	View            bool
+	ViewFilePath    string
+	ViewFileName    string
+	ViewPackageName string
+	ViewPackagePath string
+
+	Param            bool
+	ParamFilePath    string
+	ParamFileName    string
+	ParamPackageName string
+	ParamPackagePath string
+
+	Dao            bool
+	DaoFilePath    string
+	DaoFileName    string
+	DaoPackageName string
+	DaoPackagePath string
+
+	Service            bool
+	ServiceFilePath    string
+	ServiceFileName    string
+	ServicePackageName string
+	ServicePackagePath string
+
+	Controller            bool
+	ControllerFilePath    string
+	ControllerFileName    string
+	ControllerPackageName string
+	ControllerPackagePath string
+
+	// UpdateSql          string
+	// UpdateSelectiveSql string
+	CreateTime string
+}
+
+type Field struct {
+	ColumnName           string         //msyql字段名 user_id
+	ColumnNameLowerCamel string         //小驼峰 userId
+	ColumnNameUpper      string         //字段名大写 USER_ID
+	ColumnType           string         //msql 类型 varchat
+	ColumnDefault        sql.NullString //默认值
+	IsNullable           int            //允许为空
+	IsPrimaryKey         int            //是否主键
+	FieldName            string         //实体名称 大驼峰  UserId
+	FieldNullType        string         //实体golang Null类型 sql.NullString
+	FieldNullTypeValue   string         //实体golang Null类型 取值  String
+	FieldType            string         //golang 类型  string
+	FieldTypeDefault     string         //golang 类型  的默认值
+	FieldOrmTag          string         //tag orm:
+	FieldJsonTag         string         //tag json
+	FieldFormTag         string         //tag form
+	FieldDefaultTag      string         //tag 默认值
+	Comment              string         //表中字段注释
+}
+
+var dbType = map[string]goType{
+	"int":                {"int64", "sql.NullInt64", "Int64", "0"},
+	"int4":               {"int64", "sql.NullInt64", "Int64", "0"},
+	"int8":               {"int64", "sql.NullInt64", "Int64", "0"},
+	"integer":            {"int64", "sql.NullInt64", "Int64", "0"},
+	"tinyint":            {"int64", "sql.NullInt64", "Int64", "0"},
+	"smallint":           {"int64", "sql.NullInt64", "Int64", "0"},
+	"mediumint":          {"int64", "sql.NullInt64", "Int64", "0"},
+	"bigint":             {"int64", "sql.NullInt64", "Int64", "0"},
+	"int unsigned":       {"int64", "sql.NullInt64", "Int64", "0"},
+	"integer unsigned":   {"int64", "sql.NullInt64", "Int64", "0"},
+	"tinyint unsigned":   {"int64", "sql.NullInt64", "Int64", "0"},
+	"smallint unsigned":  {"int64", "sql.NullInt64", "Int64", "0"},
+	"mediumint unsigned": {"int64", "sql.NullInt64", "Int64", "0"},
+	"bigint unsigned":    {"int64", "sql.NullInt64", "Int64", "0"},
+	"bit":                {"int64", "sql.NullInt64", "Int64", "0"},
+	"bool":               {"bool", "sql.NullBool", "Bool", "false"},
+	"enum":               {"string", "sql.NullString", "String", "\"\""},
+	"set":                {"string", "sql.NullString", "String", "\"\""},
+	"varchar":            {"string", "sql.NullString", "String", "\"\""},
+	"char":               {"string", "sql.NullString", "String", "\"\""},
+	"tinytext":           {"string", "sql.NullString", "String", "\"\""},
+	"mediumtext":         {"string", "sql.NullString", "String", "\"\""},
+	"text":               {"string", "sql.NullString", "String", "\"\""},
+	"longtext":           {"string", "sql.NullString", "String", "\"\""},
+	"blob":               {"string", "sql.NullString", "String", "\"\""},
+	"tinyblob":           {"string", "sql.NullString", "String", "\"\""},
+	"mediumblob":         {"string", "sql.NullString", "String", "\"\""},
+	"longblob":           {"string", "sql.NullString", "String", "\"\""},
+	"date":               {"time.Time", "sql.NullTime", "Time", "nil"},
+	"datetime":           {"time.Time", "sql.NullTime", "Time", "nil"},
+	"timestamp":          {"time.Time", "sql.NullTime", "Time", "nil"},
+	"timestamptz":        {"time.Time", "sql.NullTime", "Time", "nil"},
+	"time":               {"time.Time", "sql.NullTime", "Time", "nil"},
+	"timetz":             {"time.Time", "sql.NullTime", "Time", "nil"},
+	"float":              {"float64", "sql.NullFloat64", "Float64", "0"},
+	"float4":             {"float64", "sql.NullFloat64", "Float64", "0"},
+	"float8":             {"float64", "sql.NullFloat64", "Float64", "0"},
+	"double":             {"float64", "sql.NullFloat64", "Float64", "0"},
+	"decimal":            {"float64", "sql.NullFloat64", "Float64", "0"},
+	"binary":             {"string", "sql.NullString", "String", "\"\""},
+	"varbinary":          {"string", "sql.NullString", "String", "\"\""},
+}
+
+type goType struct {
+	baseType      string
+	nullType      string
+	nullTypeValue string
+	defaultValue  string
+}
+
+func getFields(tableName, driverName string, db *sql.DB) ([]Field, []Field, error) {
+	var sqlStr = `select
+					column_name name,
+					data_type type,
+					if('YES'=is_nullable,true,false) is_nullable,
+					if('PRI'=column_key,true,false) is_primary_key,
+					column_comment comment,column_default 'default'
+				from
+					information_schema.COLUMNS t
+				where
+					table_schema = DATABASE() `
+	sqlStr += fmt.Sprintf(" and t.table_name = '%s' order by is_primary_key desc", tableName)
+
+	if driverName == "postgres" {
+		sqlStr = `SELECT 
+						t.column_name name ,
+						t.udt_name type,
+						CASE WHEN t.is_nullable='YES' THEN 1  ELSE 0  END is_nullable,
+						CASE WHEN tc.constraint_type='PRIMARY KEY' THEN 1  ELSE 0  END is_primary_key,
+						CASE WHEN t.column_comment is null THEN ''	ELSE t.column_comment END  comment,
+						t.column_default default
+					FROM 
+						information_schema.columns t 
+						left join information_schema.key_column_usage kcu on kcu.table_name=t.table_name and kcu.column_name=t.column_name
+						left join information_schema.table_constraints tc on tc.table_name=kcu.table_name and tc.constraint_name=kcu.constraint_name and tc.constraint_type='PRIMARY KEY'
+					WHERE 
+						t.table_catalog=current_database() and t.table_schema='public'
+		`
+		sqlStr += fmt.Sprintf(" and t.table_name = '%s' order by is_primary_key desc", tableName)
 	}
-	s.querys = append(s.querys, query...)
-	return s
-}
 
-func (s *Generator) Update(m map[string]any) *Generator {
-	s.update = m
-	return s
-}
-func (s *Generator) Updates(m []map[string]any) *Generator {
-	s.updates = m
-	return s
-}
-func (s *Generator) Insert(m map[string]any) *Generator {
-	s.insert = m
-	return s
-}
-func (s *Generator) Inserts(m []map[string]any) *Generator {
-	s.inserts = m
-	return s
-}
-
-func (s *Generator) Join(join ...*Join) *Generator {
-	if s.joins == nil {
-		s.joins = make([]*Join, 0)
+	rows, err := db.Query(sqlStr)
+	if err != nil {
+		panic(err)
 	}
-	s.joins = append(s.joins, join...)
-	return s
-}
-func (s *Generator) Table(tableName string) *Generator {
-	s.tableName = tableName
-	return s
-}
+	defer rows.Close()
 
-// 表的别名
-func (s *Generator) TableAlias(tableName, tableAlias string) *Generator {
-	s.tableName = tableName
-	s.tableAlias = tableAlias
-	return s
-}
-func (s *Generator) Primary(primary string) *Generator {
-	s.primary = primary
-	return s
-}
-func (s *Generator) Result(columns ...string) *Generator {
-	s.columns = columns
-	return s
-}
-func (s *Generator) PageNum(pageNum int) *Generator {
-	s.pageNum = pageNum
-	return s
-}
-func (s *Generator) PageStart(pageStart int) *Generator {
-	s.pageStart = pageStart
-	return s
-}
-func (s *Generator) PageSize(pageSize int) *Generator {
-	s.pageSize = pageSize
-	return s
-}
-func (s *Generator) OrderBy(orderBy []string) *Generator {
-	s.orderBy = orderBy
-	return s
-}
-func (s *Generator) AddOrderBy(name string, orderByType string) *Generator {
-	if s.orderBy == nil {
-		s.orderBy = make([]string, 0)
+	fields := make([]Field, 0)
+	primaryKeyFields := make([]Field, 0)
+	for rows.Next() {
+		field := Field{}
+		err = rows.Scan(&field.ColumnName, &field.ColumnType, &field.IsNullable, &field.IsPrimaryKey, &field.Comment, &field.ColumnDefault)
+		if err != nil {
+			panic(err)
+		}
+		field.FieldName = ToUpperCamelCase(field.ColumnName)
+		field.ColumnNameLowerCamel = ToLowerCamelCase(field.ColumnName)
+		field.ColumnNameUpper = strings.ToUpper(field.ColumnName)
+		field.FieldType = dbType[field.ColumnType].baseType
+		field.FieldTypeDefault = dbType[field.ColumnType].defaultValue
+		field.FieldNullType = dbType[field.ColumnType].nullType
+		field.FieldNullTypeValue = dbType[field.ColumnType].nullTypeValue
+		field.FieldOrmTag = fmt.Sprintf("orm:\"%v\"", field.ColumnName)
+		field.FieldJsonTag = fmt.Sprintf("json:\"%v\"", field.ColumnName)
+		field.FieldFormTag = fmt.Sprintf("form:\"%v\"", field.ColumnName)
+		val, _ := field.ColumnDefault.Value()
+		if val != nil {
+			field.FieldDefaultTag = fmt.Sprintf("default:\"%v\"", val)
+		}
+		if field.IsPrimaryKey == 1 {
+			primaryKeyFields = append(primaryKeyFields, field)
+		}
+		fields = append(fields, field)
 	}
-	s.orderBy = append(s.orderBy, name+" "+orderByType)
-	return s
+	return fields, primaryKeyFields, nil
 }
 
-func (s *Generator) GroupBy(groupBy []string) *Generator {
-	s.groupBy = groupBy
-	return s
-}
-func (s *Generator) AddGroupBy(tableName, name string) *Generator {
-	if s.groupBy == nil {
-		s.groupBy = make([]string, 0)
+func (gen *Generator) Gen(modules []Module) error {
+	if gen.project == "" {
+		return errors.New("project can not nil")
 	}
-	s.groupBy = append(s.groupBy, tableName+"."+name)
-	return s
-}
-
-func (s *Generator) CountSql(prepare bool) (string, []any, error) {
-	if s.tableName == "" {
-		return "", nil, errors.New("tableName cannot be empty")
+	if gen.dsn == "" {
+		return errors.New("dsn can not nil")
 	}
-	params := make([]any, 0, 10)
-	var sql bytes.Buffer
-	sql.WriteString("select ")
-
-	result := " count(*) count  "
-	// if s.columns != nil && len(s.columns) > 0 {
-	// 	result = strings.Join(s.columns, ",")
-	// }
-
-	sql.WriteString(result)
-	sql.WriteString(" from  " + s.tableName + "")
-
-	if s.tableAlias != "" {
-		sql.WriteString(" " + s.tableAlias + " ")
+	if gen.driverName == "" {
+		gen.driverName = "mysql"
+	}
+	db, err := sql.Open(gen.driverName, gen.dsn)
+	if err != nil {
+		return err
+	}
+	if modules == nil {
+		return errors.New("modules can not nil")
 	}
 
-	if s.joins != nil && len(s.joins) > 0 {
-		for _, join := range s.joins {
-			sql.WriteString(fmt.Sprintf(" %v %v on %v", join.joinType, join.tableName, join.condition))
-			for i, query := range join.querys {
-				if i == 0 {
-					sql.WriteString(" and ")
-				} else {
-					sql.WriteString(" or ")
+	for _, module := range modules {
+		fields, primaryKeyFields, err := getFields(module.TableName, gen.driverName, db)
+		if err != nil {
+			fmt.Printf("error:create table %v error=%v", module.TableName, err)
+			continue
+		}
+		// if primaryKeyFields == nil || len(primaryKeyFields) == 0 {
+		// 	fmt.Printf("error:table %v no primary key", module.TableName)
+		// 	continue
+		// }
+		tableName := module.TableName
+		module.CreateTime = time.Now().Format("2006-01:02 15:04:05.006")
+		module.Fields = fields
+		module.PrimaryKeyFields = primaryKeyFields
+		module.TableNameUpperCamel = ToUpperCamelCase(tableName)
+		module.TableNameLowerCamel = ToLowerCamelCase(tableName)
+		urls := strings.Split(module.ModulePath, gen.project)
+
+		if module.ModelPackageName == "" {
+			module.ModelPackageName = "model"
+		}
+
+		module.ModelPackagePath = gen.project + urls[1] + "/" + module.ModelPackageName
+		module.ModelFileName = tableName + "_" + module.ModelPackageName + ".go"
+		module.ModelFilePath = module.ModulePath + "/" + module.ModelPackageName
+
+		module.ExtendPackageName = "extend"
+		module.ExtendPackagePath = gen.project + urls[1] + "/" + module.ModelPackageName
+		module.ExtendFileName = tableName + "_" + module.ExtendPackageName + ".go"
+		module.ExtendFilePath = module.ModulePath + "/" + module.ModelPackageName
+
+		module.ViewPackageName = "view"
+		module.ViewPackagePath = gen.project + urls[1] + "/" + module.ViewPackageName
+		module.ViewFileName = tableName + "_" + module.ViewPackageName + ".go"
+		module.ViewFilePath = module.ModulePath + "/" + module.ViewPackageName
+
+		module.ParamPackageName = "param"
+		module.ParamPackagePath = gen.project + urls[1] + "/" + module.ParamPackageName
+		module.ParamFileName = tableName + "_" + module.ParamPackageName + ".go"
+		module.ParamFilePath = module.ModulePath + "/" + module.ParamPackageName
+
+		module.DaoPackageName = "dao"
+		module.DaoPackagePath = gen.project + urls[1] + "/" + module.DaoPackageName
+		module.DaoFileName = tableName + "_" + module.DaoPackageName + ".go"
+		module.DaoFilePath = module.ModulePath + "/" + module.DaoPackageName
+
+		module.ServicePackageName = "service"
+		module.ServicePackagePath = gen.project + urls[1] + "/" + module.ServicePackageName
+		module.ServiceFileName = tableName + "_" + module.ServicePackageName + ".go"
+		module.ServiceFilePath = module.ModulePath + "/" + module.ServicePackageName
+
+		module.ControllerPackageName = "controller"
+		module.ControllerPackagePath = gen.project + urls[1] + "/" + module.ControllerPackageName
+		module.ControllerFileName = tableName + "_" + module.ControllerPackageName + ".go"
+		module.ControllerFilePath = module.ModulePath + "/" + module.ControllerPackageName
+
+		if module.Model {
+			genFile(&module, module.ModelPackageName)
+		}
+		if module.Extend {
+			genFile(&module, module.ExtendPackageName)
+		}
+		if module.View {
+			genFile(&module, module.ViewPackageName)
+		}
+		if module.Param {
+			genFile(&module, module.ParamPackageName)
+		}
+		if module.Dao {
+			genFile(&module, module.DaoPackageName)
+		}
+		if module.Service {
+			genFile(&module, module.ServicePackageName)
+		}
+		if module.Controller {
+			genFile(&module, module.ControllerPackageName)
+		}
+
+	}
+	return nil
+}
+
+func genFile(table *Module, packageName string) {
+
+	var templateStr, filePath, file string
+	if packageName == "model" {
+		templateStr = getModelTemplate()
+		filePath = table.ModelFilePath
+		file = filePath + "/" + table.ModelFileName
+	} else if packageName == "extend" {
+		templateStr = getExtendTemplate()
+		filePath = table.ExtendFilePath
+		file = filePath + "/" + table.ExtendFileName
+		if IsExist(file) { //view 不覆盖
+			return
+		}
+	} else if packageName == "view" {
+		templateStr = getViewTemplate()
+		filePath = table.ViewFilePath
+		file = filePath + "/" + table.ViewFileName
+		if IsExist(file) { //view 不覆盖
+			return
+		}
+	} else if packageName == "param" {
+		templateStr = getParamTemplate()
+		filePath = table.ParamFilePath
+		file = filePath + "/" + table.ParamFileName
+		if IsExist(file) { //param 不覆盖
+			return
+		}
+	} else if packageName == "dao" {
+		templateStr = getDaoTemplate()
+		filePath = table.DaoFilePath
+		file = filePath + "/" + table.DaoFileName
+	} else if packageName == "service" {
+		templateStr = getServiceTemplate()
+		filePath = table.ServiceFilePath
+		file = filePath + "/" + table.ServiceFileName
+		if IsExist(file) { //service 不覆盖
+			return
+		}
+	} else if packageName == "controller" {
+		templateStr = getController()
+		filePath = table.ControllerFilePath
+		file = filePath + "/" + table.ControllerFileName
+		if IsExist(file) { //controller 不覆盖
+			return
+		}
+	}
+	// 第一步，加载模版文件
+	tmpl, err := template.New("tmpl").Parse(templateStr)
+	if err != nil {
+		fmt.Println("create template model, err:", err)
+		return
+	}
+	// 第二步，创建文件目录
+	err = CreateDir(filePath)
+	if err != nil {
+		fmt.Printf("create path:%v err", filePath)
+		return
+	}
+	// 第三步，创建且打开文件
+	f, err := os.OpenFile(file, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+	if err != nil {
+		fmt.Println("Can not write file")
+		return
+	}
+	defer f.Close()
+
+	// 第四步，写入数据
+	tmpl.Execute(f, table)
+
+	//第五步，格式化代码
+	cmd := exec.Command("gofmt", "-w", file)
+	cmd.Run()
+}
+
+func getModelTemplate() string {
+	return `// Create by code generator  {{.CreateTime}}
+	package model
+	
+	import (
+		"database/sql"
+		"time"
+	)
+	
+	const (
+		{{range $field := .Fields}}
+			{{- .ColumnNameUpper -}}  ="{{ .ColumnName }}" // {{ .Comment }}
+		{{end}}
+		TABLE_NAME  = "{{ .TableName }}" // 表名
+	)
+	
+	type {{.TableNameUpperCamel}}Model struct {
+		{{range $field := .Fields}}{{ .FieldName }}  {{ .FieldNullType }} ` + "`{{ .FieldOrmTag }} {{ .FieldDefaultTag }}`" + ` // {{ .Comment }}
+		{{end}}
+	}
+	
+
+	func MapToStruct(m map[string]any) *{{.TableNameUpperCamel}}Model {
+		model := &{{.TableNameUpperCamel}}Model{}
+
+		{{range $field := .Fields}}
+		if value, ok := m[{{ .ColumnNameUpper }}].({{ .FieldType }}); ok {
+			model.{{ .FieldName }} = {{.FieldNullType }}{value, true}
+		}
+		{{end}}
+	
+		return model
+	}
+	
+	func SliceToStructs(s []map[string]any) []*{{.TableNameUpperCamel}}Model {
+		slices := make([]*{{.TableNameUpperCamel}}Model, 0)
+		for _, m := range s {
+			slices = append(slices, MapToStruct(m))
+		}
+		return slices
+	}
+
+
+	func (m *{{.TableNameUpperCamel}}Model) ToMap(includeEmpty bool) map[string]any {
+		view := make(map[string]any)
+		{{range $field := .Fields}}
+			if m.{{ .FieldName }}.Valid {
+				view[{{- .ColumnNameUpper -}}] = m.{{ .FieldName }}.{{ .FieldNullTypeValue}}
+			} else if includeEmpty {
+				view[{{- .ColumnNameUpper -}}] = nil
+			}
+		{{end}}
+		return view
+	}`
+}
+func getExtendTemplate() string {
+	return `package model
+
+			type {{.TableNameUpperCamel}}Extend struct {
+				*{{.TableNameUpperCamel}}Model
+			}
+
+			func MapToExtStruct(m map[string]any) *{{.TableNameUpperCamel}}Extend {
+				model := &{{.TableNameUpperCamel}}Extend{}
+				model.{{.TableNameUpperCamel}}Model = MapToStruct(m)
+				return model
+			}
+			func SliceToExtStructs(s []map[string]any) []*{{.TableNameUpperCamel}}Extend {
+				slices := make([]{{.TableNameUpperCamel}}Extend, 0)
+				for _, m := range s {
+					slices = append(slices, MapToExtStruct(m))
 				}
-				source, param, _ := query.Source(join.tableName, prepare)
-				sql.WriteString(" " + source + " ")
-				params = append(params, param...)
-			}
-		}
-	}
-
-	if s.querys != nil && len(s.querys) > 0 {
-		n := 0
-		table := s.tableName
-		if s.tableAlias != "" {
-			table = s.tableAlias
-		}
-		for _, query := range s.querys {
-			source, param, err := query.Source(table, prepare)
-			if err != nil {
-				return "", nil, err
-			}
-			if source == "" {
-				continue
-			}
-			if n == 0 {
-				sql.WriteString(" where   ")
-			} else {
-				sql.WriteString(" or ")
-			}
-			sql.WriteString(" " + source + " ")
-			params = append(params, param...)
-			n = n + 1
-		}
-	}
-
-	return sql.String(), params, nil
+				return slices
+			}`
 }
 
-func (s *Generator) SelectSql(prepare bool) (string, []any, error) {
-	if s.tableName == "" {
-		return "", nil, errors.New("tableName cannot be empty")
+func getViewTemplate() string {
+	return ` // Create by code generator  {{.CreateTime}}
+	package view
+	
+	import (
+		"{{.ModelPackagePath}}"
+		"time"
+	)
+	type {{.TableNameUpperCamel}}View struct {
+		{{range $field := .Fields}}{{ .FieldName }}  {{ .FieldType }} ` + "`{{ .FieldJsonTag }}`" + ` // {{ .Comment }}
+		{{end}}
 	}
-	params := make([]any, 0)
-	var sql bytes.Buffer
-	sql.WriteString("select ")
-	if s.columns == nil {
-		sql.WriteString(" * ")
-	} else {
-		sql.WriteString(strings.Join(s.columns, ","))
-	}
-	sql.WriteString(" from  " + s.tableName + "")
-
-	if s.tableAlias != "" {
-		sql.WriteString(" " + s.tableAlias + " ")
-	}
-
-	if s.joins != nil && len(s.joins) > 0 {
-		for _, join := range s.joins {
-			table := join.tableName
-			if s.tableAlias != "" {
-				table = join.tableAlias
-			}
-			if join.tableName != "" {
-				sql.WriteString(fmt.Sprintf(" %v %v %v on %v", join.joinType, join.tableName, join.tableAlias, join.condition))
-			} else {
-				sql.WriteString(fmt.Sprintf(" %v %v on %v", join.joinType, join.tableName, join.condition))
-			}
-			for i, query := range join.querys {
-				if i == 0 {
-					sql.WriteString(" and ")
-				} else {
-					sql.WriteString(" or ")
-				}
-				source, param, _ := query.Source(table, prepare)
-				sql.WriteString(" " + source + " ")
-				params = append(params, param...)
-			}
+	func Convert(m *model.{{.TableNameUpperCamel}}Model) *{{.TableNameUpperCamel}}View {
+		return &{{.TableNameUpperCamel}}View{
+			{{range $field := .Fields}}{{ .FieldName }} : m.{{ .FieldName }}.{{ .FieldNullTypeValue}},
+			{{end}}
 		}
 	}
-
-	if s.querys != nil && len(s.querys) > 0 {
-		n := 0
-		table := s.tableName
-		if s.tableAlias != "" {
-			table = s.tableAlias
+	func Converts(models []*model.{{.TableNameUpperCamel}}Model) []*{{.TableNameUpperCamel}}View {
+		views := make([]*{{.TableNameUpperCamel}}View, 0, len(models))
+		for _, model := range models {
+			views = append(views, Convert(&model))
 		}
-		for _, query := range s.querys {
-			if query == nil {
-				continue
-			}
-			source, param, err := query.Source(table, prepare)
-			if err != nil {
-				return "", nil, err
-			}
-			if source == "" {
-				continue
-			}
-			if n == 0 {
-				sql.WriteString(" where   ")
-			} else {
-				sql.WriteString(" or ")
-			}
-			sql.WriteString(" " + source + " ")
-			params = append(params, param...)
-			n = n + 1
-		}
+		return views
 	}
-	if s.groupBy != nil && len(s.groupBy) > 0 {
-		sql.WriteString(" group by   ")
-		for n, v := range s.groupBy {
-			if n != 0 {
-				sql.WriteString(", ")
-			}
-			sql.WriteString(v)
-		}
+	
+	func ConvertExtend(m *model.{{.TableNameUpperCamel}}Extend) *{{.TableNameUpperCamel}}View {
+		view := Convert(m.{{.TableNameUpperCamel}}Model)
+		return view
 	}
-	if s.orderBy != nil && len(s.orderBy) > 0 {
-		sql.WriteString(" order by   ")
-		for n, v := range s.orderBy {
-			if n != 0 {
-				sql.WriteString(", ")
-			}
-			sql.WriteString(v)
+	func ConvertExtends(extends []*model.{{.TableNameUpperCamel}}Extend) []*{{.TableNameUpperCamel}}View {
+		views := make([]*{{.TableNameUpperCamel}}View, 0, len(extends))
+		for _, extend := range extends {
+			views = append(views, ConvertExtend(extend))
 		}
-	}
-	if s.pageSize > 0 {
-		if s.pageNum > 0 {
-			s.pageStart = (s.pageNum - 1) * s.pageSize
-		}
-		params = append(params, s.pageSize, s.pageStart)
-		if prepare {
-			sql.WriteString(fmt.Sprintf(" limit %s offset %s", PLACE_HOLDER_GO, PLACE_HOLDER_GO))
-		} else {
-			sql.WriteString(fmt.Sprintf(" limit %d offset %d", s.pageSize, s.pageStart))
-		}
-	}
-
-	return sql.String(), params, nil
+		return views
+	}`
 }
 
-func (s *Generator) DeleteSql(prepare bool) (string, []any, error) {
-	if s.tableName == "" {
-		return "", nil, errors.New("tableName cannot be empty")
-	}
-	if s.querys == nil || len(s.querys) != 1 {
-		return "", nil, errors.New("the querys size must be 1")
-	}
-	params := make([]any, 0, 10)
-	var sql bytes.Buffer
-	sql.WriteString("delete from " + s.tableName + " ")
-
-	sql.WriteString(" where   ")
-	for i, query := range s.querys {
-		if i != 0 {
-			sql.WriteString(" or ")
-		}
-		source, param, _ := query.Source(s.tableName, prepare)
-		sql.WriteString(" " + source + " ")
-		params = append(params, param...)
-	}
-
-	return sql.String(), params, nil
-}
-func (s *Generator) InsertSql(prepare bool) (string, []any, error) {
-
-	if s.tableName == "" {
-		return "", nil, errors.New("tableName  cannot be empty")
-	}
-	n := 0
-	params := make([]any, 0)
-	fields := make([]string, 0)
-	var sql bytes.Buffer
-	sql.WriteString("insert into " + s.tableName + " ")
-	sql.WriteString("(")
-	if s.inserts != nil && len(s.inserts) > 0 {
-		//把所有要修改的字段提取出来
-
-		for field, _ := range s.inserts[0] {
-			fields = append(fields, field)
-		}
-
-		for _, field := range fields {
-			if n != 0 {
-				sql.WriteString(",")
-			}
-			sql.WriteString(" " + field + " ")
-			n++
-		}
-		sql.WriteString(") values")
-		n = 0
-
-		for _, maps := range s.inserts {
-			if n != 0 {
-				sql.WriteString(",")
-			}
-			sql.WriteString("(")
-			m := 0
-			for _, field := range fields {
-				if m != 0 {
-					sql.WriteString(",")
-				}
-				params = append(params, maps[field])
-				if prepare {
-					sql.WriteString(fmt.Sprintf(" %s ", PLACE_HOLDER_GO))
-				} else {
-					sql.WriteString(fmt.Sprintf(" '%v' ", maps[field]))
-				}
-				m++
-			}
-			sql.WriteString(")")
-			n++
-		}
-	} else {
-		for field, _ := range s.insert {
-			fields = append(fields, field)
-		}
-		for _, field := range fields {
-			if n != 0 {
-				sql.WriteString(",")
-			}
-			sql.WriteString(" " + field + " ")
-			n++
-		}
-		sql.WriteString(") values")
-		n = 0
-		sql.WriteString("(")
-		m := 0
-		for _, field := range fields {
-			if m != 0 {
-				sql.WriteString(",")
-			}
-			params = append(params, s.insert[field])
-			if prepare {
-				sql.WriteString(fmt.Sprintf(" %s ", PLACE_HOLDER_GO))
-			} else {
-				sql.WriteString(fmt.Sprintf(" '%v' ", s.insert[field]))
-			}
-			m++
-		}
-		sql.WriteString(")")
-	}
-
-	return sql.String(), params, nil
+func getParamTemplate() string {
+	return `// Create by code generator  {{.CreateTime}}
+			package param
+			
+			import (
+				"time"
+			)
+			type {{.TableNameUpperCamel}}Param struct {
+				{{range $field := .Fields}}{{ .FieldName }}  {{ .FieldType }} ` + "`{{.FieldFormTag}} {{ .FieldJsonTag }}`" + ` // {{ .Comment }}
+				{{end}}
+				PageNum 	int ` + "`form:\"page\" json:\"page\"`" + `
+				PageStart 	int ` + "`form:\"start\" json:\"start\"`" + `
+				PageSize 	int ` + "`form:\"size\" json:\"size\"`" + `
+			}`
 }
 
-func (s *Generator) UpdateSql(prepare bool) (string, []any, error) {
-
-	if s.tableName == "" {
-		return "", nil, errors.New("tableName  cannot be empty")
-	}
-
-	if s.querys == nil || len(s.querys) != 1 {
-		return "", nil, errors.New("the querys size must be 1")
-	}
-
-	params := make([]any, 0, 10)
-	var sql bytes.Buffer
-	sql.WriteString("update " + s.tableName + " set ")
-	n := 0
-	if s.updates != nil && len(s.updates) > 0 { //批量更新
-
-		if s.primary == "" {
-			return "", nil, errors.New("primary cannot be empty")
-		}
-
-		//把所有要修改的字段提取出来
-		fields := make(map[string]string)
-		for _, setMap := range s.updates {
-			for name, _ := range setMap {
-				fields[name] = ""
-			}
-		}
-
-		for field, _ := range fields {
-			if n != 0 {
-				sql.WriteString(",")
-			}
-			sql.WriteString(fmt.Sprintf("%v = CASE %v", field, s.primary))
-			for _, setMap := range s.updates {
-				v, ok := setMap[field]
-				if !ok {
-					continue
+func getDaoTemplate() string {
+	return `// Create by go-generator  {{.CreateTime}}
+			package dao
+			
+			import (
+				generator "github.com/go-lazyer/go-north/generator"
+				"{{.ModelPackagePath}}"
+				"github.com/pkg/errors"
+			)
+			{{ if gt (len .PrimaryKeyFields) 0 -}}
+			// query first by primaryKey
+			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
+				{{ if eq (len .PrimaryKeyFields) 1 -}} 
+				query := generator.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}})
+				{{ else -}}
+				query := generator.NewBoolQuery(){{range $field := .PrimaryKeyFields}} .And(generator.NewEqualQuery(model.{{ .ColumnNameUpper }}, {{ .ColumnNameLowerCamel }})) {{end}}
+				{{end}}
+				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(query)
+				sqlStr, params, err := gen.SelectSql(true)
+				if err != nil {
+					return nil,errors.WithStack(err)
 				}
-				params = append(params, setMap[s.primary], v)
-				if prepare {
-					sql.WriteString(fmt.Sprintf(" WHEN %s THEN %s", PLACE_HOLDER_GO, PLACE_HOLDER_GO))
-				} else {
-					sql.WriteString(fmt.Sprintf(" WHEN '%v' THEN '%v'", setMap[s.primary], v))
+				return QueryFirstBySql(sqlStr, params)
+			}
+			{{ end -}}
+			// query first by gen
+			func QueryFirstByGen(gen *generator.Generator) (*model.{{.TableNameUpperCamel}}Model, error) {
+				sqlStr, params, err := gen.SelectSql(true)
+				if err != nil {
+					return nil,errors.WithStack(err)
 				}
+				return QueryFirstBySql(sqlStr, params)
 			}
-			sql.WriteString(" END ")
-			n++
-		}
-	} else { //单个更新
-		for name, value := range s.update {
-			if n != 0 {
-				sql.WriteString(",")
-			}
-			if prepare {
-				sql.WriteString(fmt.Sprintf("%v=%s", name, PLACE_HOLDER_GO))
-			} else {
-				sql.WriteString(fmt.Sprintf("%v='%v'", name, value))
-			}
-			params = append(params, value)
-			n++
-		}
-	}
+			// query first by sql
+			func QueryFirstBySql(sqlStr string, params []any) (*model.{{.TableNameUpperCamel}}Model, error) {
+				models, err := QueryBySql(sqlStr, params)
 
-	source, param, _ := s.querys[0].Source(s.tableName, prepare)
-	sql.WriteString(" where " + source + " ")
-	params = append(params, param...)
+				if models == nil || len(models) == 0 || err != nil {
+					return nil, errors.WithStack(err)
+				}
+				return models[0], nil
+			}
+			{{if eq (len .PrimaryKeyFields) 1}} 
+			// query map by primaryKeys
+			func QueryMapByPrimaryKeys(primaryKeys []any) (map[{{(index .PrimaryKeyFields 0).FieldType}}]*model.{{.TableNameUpperCamel}}Model, error) {
+				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, primaryKeys))
+				sqlStr, params, err := gen.SelectSql(true)
+				if err != nil {
+					return nil,errors.WithStack(err)
+				}
+				return QueryMapBySql(sqlStr, params)
+			}
+			
+			
+			// query map by gen
+			func QueryMapByGen(gen *generator.Generator) (map[{{(index .PrimaryKeyFields 0).FieldType}}]*model.{{.TableNameUpperCamel}}Model, error) {
+				sqlStr, params, err := gen.SelectSql(true)
+				if err != nil {
+					return nil, errors.WithStack(err)
+				}
+				return QueryMapBySql(sqlStr, params)
+			}
+			
+			// query map by sql
+			func QueryMapBySql(sqlStr string, params []any) (map[{{(index .PrimaryKeyFields 0).FieldType}}]*model.{{.TableNameUpperCamel}}Model, error) {
+				ds, err := database.DataSource()
+				if err != nil {
+					return nil, errors.WithStack(err)
+				}
+				maps,err := ds.PrepareQuery(sqlStr, params)
+				if err != nil {
+					return nil,errors.WithStack(err)
+				}
+				{{.TableNameLowerCamel}}s:= model.SliceToStructs(maps)
 
-	return sql.String(), params, nil
+				if {{.TableNameLowerCamel}}s == nil || len({{.TableNameLowerCamel}}s) == 0 {
+					return nil,nil
+				}
+				{{.TableNameLowerCamel}}Map := make(map[{{(index .PrimaryKeyFields 0).FieldType}}]*model.{{.TableNameUpperCamel}}Model, len({{.TableNameLowerCamel}}s))
+				for _, {{.TableNameLowerCamel}} := range {{.TableNameLowerCamel}}s {
+					new := {{.TableNameLowerCamel}}
+					{{.TableNameLowerCamel}}Map[{{.TableNameLowerCamel}}.{{(index .PrimaryKeyFields 0).FieldName}}.{{(index .PrimaryKeyFields 0).FieldNullTypeValue}}] = new
+				}
+				return {{.TableNameLowerCamel}}Map,nil
+			}
+			{{end}}
+			// count by gen
+			func CountByGen(gen *generator.Generator) (int64, error) {
+				sqlStr, params, err := gen.CountSql(true)
+				if err != nil {
+					return 0,errors.WithStack(err)
+				}
+				return CountBySql(sqlStr, params)
+				
+			}
+			// count by gen
+			func CountBySql(sqlStr string, params []any) (int64, error) {
+				ds, err := database.DataSource()
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				count, err := ds.PrepareCount(sqlStr, params)
+				if err != nil {
+					return 0,errors.WithStack(err)
+				}
+				return count,nil
+			}
+
+			// query by gen
+			func QueryByGen(gen *generator.Generator) ([]*model.{{.TableNameUpperCamel}}Model, error) {
+				sqlStr, params, err := gen.SelectSql(true)
+				if err != nil {
+					return nil,errors.WithStack(err)
+				}
+				return QueryBySql(sqlStr, params)
+			}
+			// query by sql
+			func QueryBySql(sqlStr string, params []any) ([]*model.{{.TableNameUpperCamel}}Model, error) {
+				ds, err := database.DataSource()
+				if err != nil {
+					return nil, errors.WithStack(err)
+				}
+				maps,err := ds.PrepareQuery(sqlStr, params)
+				if err != nil {
+					return nil,errors.WithStack(err)
+				}
+				{{.TableNameLowerCamel}}s := model.SliceToStructs(maps)
+				return {{.TableNameLowerCamel}}s,nil
+			}
+
+
+			// query extend by gen
+			func QueryExtendByGen(gen *generator.Generator) ([]*model.{{.TableNameUpperCamel}}Extend, error) {
+				sqlStr, params, err := gen.SelectSql(true)
+				if err != nil {
+					return nil,errors.WithStack(err)
+				}
+				return QueryExtendBySql(sqlStr, params)
+			}
+			// query extend by sql
+			func QueryExtendBySql(sqlStr string, params []any) ([]*model.{{.TableNameUpperCamel}}Extend, error) {
+				ds, err := database.DataSource()
+				if err != nil {
+					return nil, errors.WithStack(err)
+				}
+				maps,err := ds.PrepareQuery(sqlStr, params)
+				if err != nil {
+					return nil,errors.WithStack(err)
+				}
+				{{.TableNameLowerCamel}}Extends := model.SliceToExtStructs(maps)
+				return {{.TableNameLowerCamel}}Extends,nil
+			}
+
+			func Insert(m *model.{{.TableNameUpperCamel}}Model) (int64, error) {
+				gen := generator.NewGenerator().Table(model.TABLE_NAME).Insert(m.ToMap(false))
+				return InsertByGen(gen)
+			}
+			
+			func InsertByGen(gen *generator.Generator) (int64, error) {
+				sqlStr, params, err := gen.InsertSql(true)
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				return InsertBySql(sqlStr, params)
+			}
+			
+			func InsertBySql(sqlStr string, params []any) (int64, error) {
+				ds, err := database.DataSource()
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				id, err := ds.PrepareInsert(sqlStr, params)
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				return id, nil
+			}
+
+			//batch insert
+			func InsertByMaps(insertMaps []map[string]any) (int64, error) {
+				gen := generator.NewGenerator().Table(model.TABLE_NAME).Inserts(insertMaps)
+				sqlStr, params, err := gen.InsertSql(true)
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				return InsertBySql(sqlStr, params)
+			}
+			{{ if gt (len .PrimaryKeyFields) 0 -}}
+			func Update(m *model.{{.TableNameUpperCamel}}Model) (int64, error) {
+				{{ if eq (len .PrimaryKeyFields) 1 -}} 
+				query := generator.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, m.{{(index .PrimaryKeyFields 0).FieldName}}.{{(index .PrimaryKeyFields 0).FieldNullTypeValue}})
+				{{ else -}}
+				query := generator.NewBoolQuery(){{range $field := .PrimaryKeyFields}} .And(generator.NewEqualQuery(model.{{ .ColumnNameUpper }}, m.{{.FieldName}}.{{.FieldNullTypeValue}})) {{end}}
+				{{end -}}
+				gen := generator.NewGenerator().Table(model.TABLE_NAME).Update(m.ToMap(false)).Where(query)
+				return UpdateByGen(gen)
+			}
+			{{end}}
+			func UpdateByGen(gen *generator.Generator) (int64, error) {
+				sqlStr, params, err := gen.UpdateSql(true)
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				return UpdateBySql(sqlStr, params)
+			}
+			
+			func UpdateBySql(sqlStr string, params []any) (int64, error) {
+				ds, err := database.DataSource()
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				count, err := ds.PrepareUpdate(sqlStr, params)
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				return count, nil
+			}
+			{{ if gt (len .PrimaryKeyFields) 0 -}}
+			// 批量更新，updateMaps中必须包含主键，联合主键的表不适应x该方法
+			func UpdateByMaps(updateMaps []map[string]any) (int64, error) {
+				if updateMaps == nil || len(updateMaps) == 0 {
+					return 0, nil
+				}
+				ids := make([]any, 0)
+				for _, updateMap := range updateMaps {
+					if value, ok := updateMap[model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}]; ok {
+						ids = append(ids, value)
+					}
+				}
+				if ids == nil || len(ids) == 0 {
+					return 0, errors.New("batch update primary not allowed to be nil")
+				}
+				query := generator.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, ids)
+				gen := generator.NewGenerator().Primary(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}).Table(model.TABLE_NAME).Where(query).Updates(updateMaps)
+				sqlStr, params, err := gen.UpdateSql(true)
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				return UpdateBySql(sqlStr, params)
+			}
+			{{end}}
+			
+			{{ if gt (len .PrimaryKeyFields) 0 -}}
+			func DeleteByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (int64, error) {
+				{{ if eq (len .PrimaryKeyFields) 1 -}} 
+				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}}))
+				{{ else -}}
+				query := generator.NewBoolQuery(){{range $field := .PrimaryKeyFields}} .And(generator.NewEqualQuery(model.{{ .ColumnNameUpper }}, {{ .ColumnNameLowerCamel }})) {{end}}
+				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(query)
+				{{ end -}}
+				sqlStr, params, err := gen.DeleteSql(true)
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				return DeleteBySql(sqlStr, params)
+			}
+			{{ end -}}
+			{{ if gt (len .PrimaryKeyFields) 0 -}}
+			func DeleteByPrimaryKeys(primaryKeys []any) (int64, error) {
+				gen := generator.NewGenerator().Table(model.TABLE_NAME).Where(generator.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, primaryKeys))
+				sqlStr, params, err := gen.DeleteSql(true)
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				return DeleteBySql(sqlStr, params)
+			}
+			{{ end -}}
+			func DeleteByGen(gen *generator.Generator) (int64, error) {
+				sqlStr, params, err := gen.DeleteSql(true)
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				return DeleteBySql(sqlStr, params)
+			}
+			func DeleteBySql(sqlStr string, params []any) (int64, error) {
+				ds, err := database.DataSource()
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				count, err := ds.PrepareDelete(sqlStr, params)
+				if err != nil {
+					return 0, errors.WithStack(err)
+				}
+				return count, nil
+			}`
+}
+func getServiceTemplate() string {
+	return `// Create by code generator  {{.CreateTime}}
+			package service
+
+			import (
+				"{{.DaoPackagePath}}"
+				"{{.ModelPackagePath}}"
+				"{{.ParamPackagePath}}"
+			
+				generator "github.com/go-lazyer/go-north/sql"
+			)
+
+			{{ if gt (len .PrimaryKeyFields) 0 -}} 
+			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
+				{{.TableNameLowerCamel}}, err := dao.QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }}   {{end}})
+				if err != nil {
+					return nil,err
+				}
+				return {{.TableNameLowerCamel}},nil
+			}
+			{{end}}
+
+			func QueryByParam({{.TableNameLowerCamel}}Param *param.{{.TableNameUpperCamel}}Param) ([]*model.{{.TableNameUpperCamel}}Model, error) {
+				query := generator.NewBoolQuery()
+				gen := generator.NewGenerator().PageNum({{.TableNameLowerCamel}}Param.PageNum).PageStart({{.TableNameLowerCamel}}Param.PageStart).PageSize({{.TableNameLowerCamel}}Param.PageSize).Table(model.TABLE_NAME).Where(query)
+				{{.TableNameLowerCamel}}s, err := dao.QueryByGen(gen)
+				if err != nil {
+					return nil,err
+				}
+				return {{.TableNameLowerCamel}}s,nil
+			}`
+}
+func getController() string {
+	return `// Create by code generator  {{.CreateTime}}
+			package controller
+			
+			import (
+				"net/http"
+			
+				"github.com/gin-gonic/gin"
+			)
+			
+			func Index(g *gin.Context) {
+				data := gin.H{
+					"code": 200,
+				}
+				g.JSON(http.StatusOK, data)
+			}`
 }
