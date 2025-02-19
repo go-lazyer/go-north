@@ -3,9 +3,7 @@ package north
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"testing"
-	"time"
 	// _ "github.com/go-sql-driver/mysql"
 )
 
@@ -13,68 +11,27 @@ const (
 	USER_ID = "user_id" //
 	DAY     = "day"     //
 	NUM     = "num"     //
-
-	TABLE_NAME = "tip_off" // 表名
 )
 
 type Test struct {
 	UserId sql.NullString `orm:"user_id" ` //
 	Day    sql.NullTime   `orm:"day" `     //
-	Num    sql.NullInt64  `orm:"day" `     //
+	Num    sql.NullInt64  `orm:"num" `     //
 }
 
-func ToStruct(m map[string]any) Test {
-	model := Test{}
-	if value, ok := m[USER_ID].(string); ok {
-		model.UserId = sql.NullString{String: value, Valid: true}
-	}
-	if value, ok := m[NUM].(int64); ok {
-		model.Num = sql.NullInt64{Int64: value, Valid: true}
-	}
-	if value, ok := m[DAY].(time.Time); ok {
-		// 如果已经是 time.Time 类型，则直接使用
-		model.Day = sql.NullTime{Time: value, Valid: true}
-	}
-	return model
-}
-
-func ToStructs(s []map[string]any) []Test {
-	slices := make([]Test, 0)
-	for _, m := range s {
-		slices = append(slices, ToStruct(m))
-	}
-	return slices
-}
-
-func TestRowsToResults(t *testing.T) {
-	// s := make([]any, 0)
-
+func TestFull(t *testing.T) {
 	username := "root"
-	password := "xxxx"
+	password := "XXXXXX"
 	host := "test.daoway.cn"
 	port := "3306"
 	dbname := "daowei"
 	connStr := fmt.Sprintf("%s:%s@(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", username, password, host, port, dbname)
 	// 创建数据库连接
-	db, err := sql.Open("mysql", connStr)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
-	sql1 := "select * from test"
-
-	params := make([]any, 0)
-
-	rows, err := db.Query(sql1, params...)
+	ds, err := Open(DRIVER_NAME_MYSQL, connStr, &Config{MaxOpenConns: 10, MaxIdleConns: 10})
 	if err != nil {
 		fmt.Println(err)
 	}
-
-	// results, _ := RowsToResults[s](rows)
-	// results, _ := RowsToResults[Test](rows)
-	results, _ := RowsToMapSlice(rows)
-	fmt.Println(ToStructs(results))
-	// fmt.Println("type:", reflect.TypeOf(results))
-	// fmt.Println("type:", reflect.TypeOf(results).Kind())
+	sql1 := "select t.num from test t where t.user_id='a'"
+	params := make([]any, 0)
+	fmt.Println(PrepareQuery[Test](sql1, params, ds))
 }

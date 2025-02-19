@@ -42,7 +42,7 @@ func Open(driverName string, dsn string, config *Config) (*DataSource, error) {
 	}, nil
 }
 
-func (ds *DataSource) Count(sql string, params []any) (int64, error) {
+func Count(sql string, params []any, ds *DataSource) (int64, error) {
 	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -62,7 +62,7 @@ func (ds *DataSource) Count(sql string, params []any) (int64, error) {
 	return count, nil
 }
 
-func (ds *DataSource) PrepareCount(sql string, params []any) (int64, error) {
+func PrepareCount(sql string, params []any, ds *DataSource) (int64, error) {
 	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -90,7 +90,7 @@ func (ds *DataSource) PrepareCount(sql string, params []any) (int64, error) {
 }
 
 // 普通查询
-func (ds *DataSource) Query(sql string, params []any) ([]map[string]any, error) {
+func Query[T any](sql string, params []any, ds *DataSource) ([]T, error) {
 	if ds.Db == nil {
 		return nil, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -99,11 +99,11 @@ func (ds *DataSource) Query(sql string, params []any) ([]map[string]any, error) 
 		return nil, err
 	}
 	defer rows.Close()
-	return RowsToMapSlice(rows)
+	return RowsToStruct[T](rows)
 }
 
-// 预处理查询
-func (ds *DataSource) PrepareQuery(sql string, params []any) ([]map[string]any, error) {
+// 预处理查询func RowsToStruct[T any](rows *sql.Rows) ([]T, error) {
+func PrepareQuery[T any](sql string, params []any, ds *DataSource) ([]T, error) {
 	if ds.Db == nil {
 		return nil, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -118,11 +118,11 @@ func (ds *DataSource) PrepareQuery(sql string, params []any) ([]map[string]any, 
 		return nil, err
 	}
 	defer rows.Close()
-	return RowsToMapSlice(rows)
+	return RowsToStruct[T](rows)
 }
 
 // 预处理插入 返回批量自增ID
-func (ds *DataSource) PrepareInsert(sql string, params []any) (int64, error) {
+func PrepareInsert(sql string, params []any, ds *DataSource) (int64, error) {
 	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -143,7 +143,7 @@ func (ds *DataSource) PrepareInsert(sql string, params []any) (int64, error) {
 	return id, nil
 }
 
-func (ds *DataSource) PrepareUpdate(sql string, params []any) (int64, error) {
+func PrepareUpdate(sql string, params []any, ds *DataSource) (int64, error) {
 	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -158,7 +158,7 @@ func (ds *DataSource) PrepareUpdate(sql string, params []any) (int64, error) {
 	}
 	return n, nil
 }
-func (ds *DataSource) PrepareSave(sql string, params []any) (int64, error) {
+func PrepareSave(sql string, params []any, ds *DataSource) (int64, error) {
 	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -173,7 +173,7 @@ func (ds *DataSource) PrepareSave(sql string, params []any) (int64, error) {
 	}
 	return n, nil
 }
-func (ds *DataSource) PrepareDelete(sql string, params []any) (int64, error) {
+func PrepareDelete(sql string, params []any, ds *DataSource) (int64, error) {
 	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -190,18 +190,6 @@ func (ds *DataSource) PrepareDelete(sql string, params []any) (int64, error) {
 }
 
 // 把查询结果映射为实体
-// 支持list
-func RowsToResults[T any](rows *sql.Rows) ([]T, error) {
-	// if reflect.TypeOf(results).Kind() != reflect.Slice {
-	// 	return errors.New("results Must be slice")
-	// }
-
-	// fmt.Println("type:", reflect.TypeOf(results))
-	// fmt.Println("type:", reflect.TypeOf(results).Kind())
-
-	return RowsToStruct[T](rows)
-}
-
 func RowsToStruct[T any](rows *sql.Rows) ([]T, error) {
 	//创建一个切片的类型
 	sliceType := reflect.SliceOf(reflect.TypeOf(new(T)).Elem())
@@ -236,7 +224,6 @@ func RowsToStruct[T any](rows *sql.Rows) ([]T, error) {
 				return nil, fmt.Errorf("field %s not found in type %T", columnName, elem)
 			}
 			scanArgs[colIndex] = field.Addr().Interface()
-
 		}
 
 		if err := rows.Scan(scanArgs...); err != nil {
@@ -252,143 +239,17 @@ func RowsToStruct[T any](rows *sql.Rows) ([]T, error) {
 
 // getFieldTagValue 获取结构体字段的tag值
 func getFieldTagValue(field reflect.StructField, tagName string) (string, bool) {
-	tag, ok := field.Tag.Lookup(tagName)
-	if ok {
+	if tag, ok := field.Tag.Lookup(tagName); ok {
 		parts := strings.Split(tag, ",")
 		return parts[0], true
 	}
 	return "", false
 }
-
-// func RowsToStructs(rows *sql.Rows, results any) (err error) {
-// 	columns, err := rows.Columns()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	strusRV := reflect.Indirect(reflect.ValueOf(results))
-// 	elemRT := strusRV.Type().Elem()
-
-// 	fieldInfo := getFieldInfo(elemRT)
-// 	for rows.Next() {
-// 		var struRV reflect.Value
-// 		var struField reflect.Value
-// 		if elemRT.Kind() == reflect.Ptr {
-// 			struRV = reflect.New(elemRT.Elem())
-// 			struField = reflect.Indirect(struRV)
-// 		} else {
-// 			struRV = reflect.Indirect(reflect.New(elemRT))
-// 			struField = struRV
-// 		}
-// 		var values []any
-// 		for _, column := range columns {
-// 			idx, ok := fieldInfo[strings.ToLower(column)]
-// 			var v any
-// 			if !ok {
-// 				var i any
-// 				v = &i
-// 			} else {
-// 				v = struField.FieldByIndex(idx).Addr().Interface()
-// 			}
-// 			values = append(values, v)
-// 		}
-// 		err = rows.Scan(values...)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		strusRV = reflect.Append(strusRV, struRV)
-// 	}
-// 	if err = rows.Err(); err != nil {
-// 		return err
-// 	}
-// 	reflect.Indirect(reflect.ValueOf(results)).Set(strusRV)
-// 	return nil
-// }
-// func getFieldInfo(typ reflect.Type) map[string][]int {
-// 	if typ.Kind() == reflect.Ptr {
-// 		typ = typ.Elem()
-// 	}
-// 	finfo := make(map[string][]int)
-
-// 	for i := 0; i < typ.NumField(); i++ {
-// 		f := typ.Field(i)
-// 		tag := f.Tag.Get("orm")
-
-// 		// Skip unexported fields or fields marked with "-"
-// 		if f.PkgPath != "" || tag == "-" {
-// 			continue
-// 		}
-
-// 		// Handle embedded structs
-// 		if f.Anonymous && f.Type.Kind() == reflect.Struct {
-// 			for k, v := range getFieldInfo(f.Type) {
-// 				finfo[k] = append(f.Index, v...)
-// 			}
-// 			continue
-// 		}
-
-// 		// Use field name for untagged fields
-// 		if tag == "" {
-// 			tag = f.Name
-// 		}
-
-// 		tag = strings.ToLower(tag)
-
-// 		finfo[tag] = f.Index
-// 	}
-
-// 	return finfo
-// }
-
-// func RowsToCnts(rows *sql.Rows, cnts any) (err error) {
-// 	cntsRV := reflect.Indirect(reflect.ValueOf(cnts))
-// 	elemRT := cntsRV.Type().Elem()
-
-// 	for rows.Next() {
-// 		var values []any
-// 		var cntRV reflect.Value
-// 		if elemRT.Kind() == reflect.Ptr {
-// 			cntRV = reflect.New(elemRT.Elem())
-// 			values = append(values, cntRV.Interface())
-// 		} else {
-// 			cntRV = reflect.Indirect(reflect.New(elemRT))
-// 			values = append(values, cntRV.Addr().Interface())
-// 		}
-// 		err = rows.Scan(values...)
-// 		if err != nil {
-// 			return
-// 		}
-// 		cntsRV = reflect.Append(cntsRV, cntRV)
-// 	}
-// 	if err = rows.Err(); err != nil {
-// 		return
-// 	}
-// 	reflect.Indirect(reflect.ValueOf(cnts)).Set(cntsRV)
-
-// 	return
-// }
-
-// func RowsToCnt(rows *sql.Rows, cnt any) (err error) {
-// 	cntRT := reflect.TypeOf(cnt).Elem()
-
-//		cntsPtrRV := reflect.New(reflect.SliceOf(cntRT))
-//		err = RowsToCnts(rows, cntsPtrRV.Interface())
-//		if err != nil {
-//			return
-//		}
-//		cntsRV := reflect.Indirect(cntsPtrRV)
-//		if cntsRV.Len() == 0 {
-//			err = sql.ErrNoRows
-//			return
-//		}
-//		reflect.Indirect(reflect.ValueOf(cnt)).Set(cntsRV.Index(0))
-//		return
-//	}
 func RowsToMapSlice(rows *sql.Rows) ([]map[string]any, error) {
 	columns, err := rows.Columns()
 	if err != nil {
 		return nil, err
 	}
-
 	results := make([]map[string]any, 0)
 	values := make([]any, len(columns))
 	scanArgs := make([]any, len(values))
@@ -419,7 +280,6 @@ func RowsToMapSlice(rows *sql.Rows) ([]map[string]any, error) {
 
 	return results, nil
 }
-
 func prepareConvert(sqlStr, driverName string) string {
 	if driverName == DRIVER_NAME_MYSQL {
 		return strings.ReplaceAll(sqlStr, PLACE_HOLDER_GO, "?")
