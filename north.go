@@ -31,7 +31,7 @@ type North struct {
 	columns    []string
 }
 
-func NewNorth() *North {
+func CreateNorth() *North {
 	return new(North)
 }
 

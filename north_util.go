@@ -90,7 +90,7 @@ func PrepareCount(sql string, params []any, ds *DataSource) (int64, error) {
 }
 
 // 普通查询
-func Query[T any](sql string, params []any, ds *DataSource) ([]T, error) {
+func Query[T any](sql string, params []any, ds *DataSource) ([]*T, error) {
 	if ds.Db == nil {
 		return nil, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -99,11 +99,11 @@ func Query[T any](sql string, params []any, ds *DataSource) ([]T, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	return RowsToStruct[T](rows)
+	return RowsToStructPtrs[T](rows)
 }
 
 // 预处理查询func RowsToStruct[T any](rows *sql.Rows) ([]T, error) {
-func PrepareQuery[T any](sql string, params []any, ds *DataSource) ([]T, error) {
+func PrepareQuery[T any](sql string, params []any, ds *DataSource) ([]*T, error) {
 	if ds.Db == nil {
 		return nil, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -190,10 +190,10 @@ func PrepareDelete(sql string, params []any, ds *DataSource) (int64, error) {
 }
 
 // 把查询结果映射为实体
-func RowsToStruct[T any](rows *sql.Rows) ([]T, error) {
-	//创建一个切片的类型
-	sliceType := reflect.SliceOf(reflect.TypeOf(new(T)).Elem())
-	//创建一个具有给定长度和容量的切片
+func RowsToStruct[T any](rows *sql.Rows) ([]*T, error) {
+	// 创建一个切片的类型，元素为指针类型
+	sliceType := reflect.SliceOf(reflect.PtrTo(reflect.TypeOf(new(T)).Elem()))
+	// 创建一个具有给定长度和容量的切片
 	sliceValue := reflect.MakeSlice(sliceType, 0, 0)
 
 	columns, err := rows.Columns()
@@ -203,7 +203,11 @@ func RowsToStruct[T any](rows *sql.Rows) ([]T, error) {
 
 	// 构建字段到列索引的映射
 	fieldToColIndex := make(map[string]int)
+
 	structType := reflect.TypeOf(new(T)).Elem()
+	if structType.Kind() == reflect.Ptr {
+		return nil, errors.New("struct must be a non-pointer type")
+	}
 	for i, columnName := range columns {
 		for j := 0; j < structType.NumField(); j++ {
 			field := structType.Field(j)
@@ -229,12 +233,64 @@ func RowsToStruct[T any](rows *sql.Rows) ([]T, error) {
 		if err := rows.Scan(scanArgs...); err != nil {
 			return nil, err
 		}
-		sliceValue = reflect.Append(sliceValue, elemValue)
+		// 将 elem 的地址（即指针）添加到切片中
+		sliceValue = reflect.Append(sliceValue, reflect.ValueOf(&elem))
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	return sliceValue.Interface().([]T), nil
+	return sliceValue.Interface().([]*T), nil
+}
+func RowsToStructPtrs[T any](rows *sql.Rows) ([]*T, error) {
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+
+	sliceType := reflect.SliceOf(reflect.PtrTo(reflect.TypeOf(new(T)).Elem()))
+	sliceValue := reflect.MakeSlice(sliceType, 0, 0)
+
+	structType := reflect.TypeOf(new(T)).Elem()
+	if structType.Kind() == reflect.Ptr {
+		return nil, errors.New("struct must be a non-pointer type")
+	}
+
+	fieldToColIndex := make(map[string]int)
+	for i, columnName := range columns {
+		for j := 0; j < structType.NumField(); j++ {
+			field := structType.Field(j)
+			if tagValue, ok := getFieldTagValue(field, "orm"); ok && tagValue == columnName {
+				fieldToColIndex[field.Name] = i // 使用字段名作为键
+				break
+			}
+		}
+	}
+
+	for rows.Next() {
+		elemPtr := reflect.New(structType)
+		elemValue := elemPtr.Elem()
+
+		scanArgs := make([]any, len(columns))
+		for columnName, colIndex := range fieldToColIndex {
+			field := elemValue.FieldByName(columnName)
+			if !field.IsValid() || !field.CanAddr() {
+				return nil, fmt.Errorf("field %s not found or not addressable in type %T", columnName, elemValue.Interface())
+			}
+			scanArgs[colIndex] = field.Addr().Interface()
+		}
+
+		if err := rows.Scan(scanArgs...); err != nil {
+			return nil, err
+		}
+
+		sliceValue = reflect.Append(sliceValue, elemPtr)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return sliceValue.Interface().([]*T), nil
 }
 
 // getFieldTagValue 获取结构体字段的tag值

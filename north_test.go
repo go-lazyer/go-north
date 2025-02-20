@@ -4,7 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"testing"
-	// _ "github.com/go-sql-driver/mysql"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 const (
@@ -21,7 +22,7 @@ type Test struct {
 
 func TestFull(t *testing.T) {
 	username := "root"
-	password := "XXXXXX"
+	password := "Daoway_Mysql_iO12"
 	host := "test.daoway.cn"
 	port := "3306"
 	dbname := "daowei"
@@ -33,32 +34,39 @@ func TestFull(t *testing.T) {
 	}
 	sql1 := "select t.num from test t where t.user_id='a'"
 	params := make([]any, 0)
-	fmt.Println(Query[Test](sql1, params, ds))
+	ts, err := Query[Test](sql1, params, ds)
+	if err != nil {
+		fmt.Println(err)
+	}
+	for _, testInstance := range ts {
+		fmt.Print(testInstance)
+		// 如果有更多字段，可以继续访问它们
+	}
 }
 func TestGenerator_CountSql(t *testing.T) {
 	//select count(1) count from user where t.id>1000
 	query := NewGreaterThanQuery("id", 1000)
-	gen := NewNorth().Table("user").Where(query)
+	gen := CreateNorth().Table("user").Where(query)
 	fmt.Println(gen.CountSql(false))
 }
 
 func TestGenerator_GroupSql(t *testing.T) {
 	//select count(1) count from user where t.id>1000
 	query := NewGreaterThanQuery("id", 1000)
-	gen := NewNorth().Table("user").Where(query)
+	gen := CreateNorth().Table("user").Where(query)
 	fmt.Println(gen.CountSql(false))
 }
 
 func TestGenerator_SelectSql1(t *testing.T) {
 	//select * from user
 	query1 := NewBoolQuery()
-	gen := NewNorth().Table("user").Where(query1)
+	gen := CreateNorth().Table("user").Where(query1)
 	fmt.Println(gen.SelectSql(false))
 }
 func TestGenerator_SelectSql2(t *testing.T) {
 	//select * from user where t.id=1000
 	query := NewEqualQuery("id", 1000)
-	gen := NewNorth().Table("user").Where(query)
+	gen := CreateNorth().Table("user").Where(query)
 	fmt.Println(gen.SelectSql(false))
 }
 func TestGenerator_SelectSql3(t *testing.T) {
@@ -66,7 +74,7 @@ func TestGenerator_SelectSql3(t *testing.T) {
 	idQuery := NewEqualQuery("id", 1000)
 	ageQuery := NewGreaterThanQuery("age", 20)
 	boolQuery := NewBoolQuery().And(idQuery, ageQuery)
-	gen := NewNorth().Table("user").Where(boolQuery).AddOrderBy("age", "desc")
+	gen := CreateNorth().Table("user").Where(boolQuery).AddOrderBy("age", "desc")
 	fmt.Println(gen.SelectSql(false))
 }
 func TestGenerator_SelectSql4(t *testing.T) {
@@ -75,7 +83,7 @@ func TestGenerator_SelectSql4(t *testing.T) {
 	ageQuery := NewGreaterThanQuery("age", 20)
 	boolQuery := NewBoolQuery().And(idQuery, ageQuery)
 	ageQuery2 := NewLessThanOrEqualQuery("age", 10)
-	gen := NewNorth().Result("id", "name", "age").Table("user").Where(boolQuery, ageQuery2).AddOrderBy("age", "desc").AddOrderBy("id", "asc")
+	gen := CreateNorth().Result("id", "name", "age").Table("user").Where(boolQuery, ageQuery2).AddOrderBy("age", "desc").AddOrderBy("id", "asc")
 	fmt.Println(gen.SelectSql(false))
 }
 func TestGenerator_SelectSql5(t *testing.T) {
@@ -83,14 +91,14 @@ func TestGenerator_SelectSql5(t *testing.T) {
 	idQuery := NewEqualQuery("id", 1000)
 
 	join := NewAliasJoin("order", "o", INNER_JOIN).Condition("u", "id", "o", "user_id")
-	gen := NewNorth().Result("u.id", "o.id").TableAlias("user", "u").Join(join).Where(idQuery)
+	gen := CreateNorth().Result("u.id", "o.id").TableAlias("user", "u").Join(join).Where(idQuery)
 	fmt.Println(gen.SelectSql(false))
 }
 
 func TestGenerator_SelectSql6(t *testing.T) {
 	// select user.sex,count(user.sex) count  from user group by user.sex
 
-	gen := NewNorth().Result("user.sex", "count(user.sex) count").Table("user").AddGroupBy("user", "sex")
+	gen := CreateNorth().Result("user.sex", "count(user.sex) count").Table("user").AddGroupBy("user", "sex")
 	fmt.Println(gen.SelectSql(false))
 }
 
@@ -99,7 +107,7 @@ func TestGenerator_SelectSql7(t *testing.T) {
 	idQuery := NewEqualQuery("id", 1000)
 
 	join := NewAliasJoin("order", "o", INNER_JOIN).Condition("u", "id", "o", "user_id").Where(NewFieldGreaterThanQuery("o", "create_time", "u", "create_time"))
-	gen := NewNorth().Result("u.id", "o.id").TableAlias("user", "u").Join(join).Where(idQuery)
+	gen := CreateNorth().Result("u.id", "o.id").TableAlias("user", "u").Join(join).Where(idQuery)
 	fmt.Println(gen.SelectSql(true))
 }
 
@@ -110,7 +118,7 @@ func TestGenerator_UpdateSql(t *testing.T) {
 		"age":  21,
 		"name": "lazyer",
 	}
-	gen := NewNorth().Table("user").Where(query).Update(set)
+	gen := CreateNorth().Table("user").Where(query).Update(set)
 	fmt.Println(gen.UpdateSql(false))
 }
 
@@ -158,7 +166,7 @@ func TestGenerator_UpdatesSql(t *testing.T) {
 		10001, 10002, 10003,
 	}
 	query := NewInQuery("dwid", dwids)
-	gen := NewNorth().Table("user").Where(query).Primary("dwid").Updates(set)
+	gen := CreateNorth().Table("user").Where(query).Primary("dwid").Updates(set)
 	fmt.Print(gen.UpdateSql(false))
 }
 
@@ -184,7 +192,7 @@ func TestGenerator_InsertsSql(t *testing.T) {
 	dwids := []map[string]any{
 		f1, f2, f3,
 	}
-	gen := NewNorth().Table("user").Inserts(dwids)
+	gen := CreateNorth().Table("user").Inserts(dwids)
 	fmt.Print(gen.InsertSql(false))
 }
 
@@ -194,6 +202,6 @@ func TestGenerator_InsertSql(t *testing.T) {
 		"sex":  "girl",
 		"age":  "30",
 	}
-	gen := NewNorth().Table("user").Insert(f3)
+	gen := CreateNorth().Table("user").Insert(f3)
 	fmt.Print(gen.InsertSql(false))
 }
