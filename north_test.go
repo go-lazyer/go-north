@@ -24,7 +24,7 @@ type Test1 struct {
 
 func TestFull(t *testing.T) {
 	username := "root"
-	password := "Daoway_Mysql_iO12"
+	password := "******"
 	host := "test.daoway.cn"
 	port := "3306"
 	dbname := "daowei"
