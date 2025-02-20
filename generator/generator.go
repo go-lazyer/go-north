@@ -407,7 +407,6 @@ func getModelTemplate() string {
 	
 	import (
 		"database/sql"
-		"time"
 	)
 	
 	const (
@@ -422,28 +421,6 @@ func getModelTemplate() string {
 		{{end}}
 	}
 	
-
-	func MapToStruct(m map[string]any) *{{.TableNameUpperCamel}}Model {
-		model := &{{.TableNameUpperCamel}}Model{}
-
-		{{range $field := .Fields}}
-		if value, ok := m[{{ .ColumnNameUpper }}].({{ .FieldType }}); ok {
-			model.{{ .FieldName }} = {{.FieldNullType }}{value, true}
-		}
-		{{end}}
-	
-		return model
-	}
-	
-	func SliceToStructs(s []map[string]any) []*{{.TableNameUpperCamel}}Model {
-		slices := make([]*{{.TableNameUpperCamel}}Model, 0)
-		for _, m := range s {
-			slices = append(slices, MapToStruct(m))
-		}
-		return slices
-	}
-
-
 	func (m *{{.TableNameUpperCamel}}Model) ToMap(includeEmpty bool) map[string]any {
 		view := make(map[string]any)
 		{{range $field := .Fields}}
@@ -461,19 +438,6 @@ func getExtendTemplate() string {
 
 			type {{.TableNameUpperCamel}}Extend struct {
 				*{{.TableNameUpperCamel}}Model
-			}
-
-			func MapToExtStruct(m map[string]any) *{{.TableNameUpperCamel}}Extend {
-				model := &{{.TableNameUpperCamel}}Extend{}
-				model.{{.TableNameUpperCamel}}Model = MapToStruct(m)
-				return model
-			}
-			func SliceToExtStructs(s []map[string]any) []*{{.TableNameUpperCamel}}Extend {
-				slices := make([]{{.TableNameUpperCamel}}Extend, 0)
-				for _, m := range s {
-					slices = append(slices, MapToExtStruct(m))
-				}
-				return slices
 			}`
 }
 
@@ -599,7 +563,7 @@ func getDaoTemplate() string {
 			 if err != nil {
 				return nil, errors.WithStack(err)
 			 }
-			 {{.TableNameLowerCamel}}s,err := ds.PrepareQuery[model.{{.TableNameUpperCamel}}Model](sqlStr, params,ds)
+			 {{.TableNameLowerCamel}}s,err := north.PrepareQuery[model.{{.TableNameUpperCamel}}Model](sqlStr, params,ds)
 			 if err != nil {
 				return nil,errors.WithStack(err)
 			 }
