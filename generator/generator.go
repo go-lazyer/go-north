@@ -246,7 +246,7 @@ func (gen *Generator) Gen(modules []Module) error {
 
 	for _, module := range modules {
 		fields, primaryKeyFields, err := getFields(module.TableName, gen.driverName, db)
-		if err != nil {
+		if len(fields) == 0 || err != nil {
 			fmt.Printf("error:create table %v error=%v", module.TableName, err)
 			continue
 		}
