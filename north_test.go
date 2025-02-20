@@ -4,8 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"testing"
-
-	_ "github.com/go-sql-driver/mysql"
+	// _ "github.com/go-sql-driver/mysql"
 )
 
 const (
