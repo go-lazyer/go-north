@@ -255,17 +255,11 @@ func RowsToStructPtrs[T any](rows *sql.Rows) ([]*T, error) {
 		return nil, errors.New("struct must be a non-pointer type")
 	}
 
-	fieldToColIndex := make(map[string]int)
-	for i, columnName := range columns {
-		for j := 0; j < structType.NumField(); j++ {
-			field := structType.Field(j)
-			if tagValue, ok := getFieldTagValue(field, "orm"); ok && tagValue == columnName {
-				fieldToColIndex[field.Name] = i // 使用字段名作为键
-				break
-			}
-		}
+	// 递归获取所有字段及其对应的 orm 标签
+	fieldToColIndex, err := getAllFieldToColIndex(structType, columns)
+	if err != nil {
+		return nil, err
 	}
-
 	for rows.Next() {
 		elemPtr := reflect.New(structType)
 		elemValue := elemPtr.Elem()
@@ -291,6 +285,50 @@ func RowsToStructPtrs[T any](rows *sql.Rows) ([]*T, error) {
 	}
 
 	return sliceValue.Interface().([]*T), nil
+}
+
+// 递归获取所有字段及其对应的 orm 标签
+func getAllFieldToColIndex(structType reflect.Type, columns []string) (map[string]int, error) {
+	fieldToColIndex := make(map[string]int)
+
+	for i, columnName := range columns {
+		var found bool
+		err := forEachField(structType, func(field reflect.StructField) error {
+			tagValue := field.Tag.Get("orm")
+			if tagValue == columnName {
+				fieldToColIndex[field.Name] = i
+				found = true
+				return errors.New("found") // 用于退出循环
+			}
+			return nil
+		})
+		if err != nil && err.Error() != "found" {
+			return nil, err
+		}
+		if !found {
+			return nil, fmt.Errorf("column %s not found in struct fields", columnName)
+		}
+	}
+
+	return fieldToColIndex, nil
+}
+
+// 遍历结构体的所有字段，包括嵌套字段
+func forEachField(structType reflect.Type, fn func(reflect.StructField) error) error {
+	for i := 0; i < structType.NumField(); i++ {
+		field := structType.Field(i)
+		if field.Anonymous && field.Type.Kind() == reflect.Struct {
+			// 如果是嵌套结构体，递归处理
+			if err := forEachField(field.Type, fn); err != nil {
+				return err
+			}
+		} else {
+			if err := fn(field); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // getFieldTagValue 获取结构体字段的tag值

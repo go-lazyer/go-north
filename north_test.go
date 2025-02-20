@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"testing"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 const (
@@ -17,10 +19,13 @@ type Test struct {
 	Day    sql.NullTime   `orm:"day" `     //
 	Num    sql.NullInt64  `orm:"num" `     //
 }
+type Test1 struct {
+	Test
+}
 
 func TestFull(t *testing.T) {
 	username := "root"
-	password := "######"
+	password := "Daoway_Mysql_iO12"
 	host := "test.daoway.cn"
 	port := "3306"
 	dbname := "daowei"
@@ -30,9 +35,9 @@ func TestFull(t *testing.T) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	sql1 := "select t.num from test t where t.user_id='a'"
+	sql1 := "select * from test t where t.user_id='a'"
 	params := make([]any, 0)
-	ts, err := Query[Test](sql1, params, ds)
+	ts, err := Query[Test1](sql1, params, ds)
 	if err != nil {
 		fmt.Println(err)
 	}
