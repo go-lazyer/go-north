@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"testing"
-
-	_ "github.com/go-sql-driver/mysql"
 )
 
 const (
@@ -22,7 +20,7 @@ type Test struct {
 
 func TestFull(t *testing.T) {
 	username := "root"
-	password := "Daoway_Mysql_iO12"
+	password := "######"
 	host := "test.daoway.cn"
 	port := "3306"
 	dbname := "daowei"
