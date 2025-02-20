@@ -437,7 +437,7 @@ func getExtendTemplate() string {
 	return `package model
 
 			type {{.TableNameUpperCamel}}Extend struct {
-				*{{.TableNameUpperCamel}}Model
+				{{.TableNameUpperCamel}}Model
 			}`
 }
 
@@ -468,7 +468,7 @@ func getViewTemplate() string {
 	}
 	
 	func ConvertExtend(m *model.{{.TableNameUpperCamel}}Extend) *{{.TableNameUpperCamel}}View {
-		view := Convert(m.{{.TableNameUpperCamel}}Model)
+		view := Convert(&m.{{.TableNameUpperCamel}}Model)
 		return view
 	}
 	func ConvertExtends(extends []*model.{{.TableNameUpperCamel}}Extend) []*{{.TableNameUpperCamel}}View {
