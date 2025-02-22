@@ -131,9 +131,9 @@ func (s *North) CountSql(prepare bool) (string, []any, error) {
 	sql.WriteString("select ")
 
 	result := " count(*) count  "
-	// if s.columns != nil && len(s.columns) > 0 {
-	// 	result = strings.Join(s.columns, ",")
-	// }
+	if s.columns != nil && len(s.columns) == 1 {
+		result = strings.Join(s.columns, ",")
+	}
 
 	sql.WriteString(result)
 	sql.WriteString(" from  " + s.tableName + "")
