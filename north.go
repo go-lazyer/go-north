@@ -207,7 +207,7 @@ func (s *North) SelectSql(prepare bool) (string, []any, error) {
 	if s.joins != nil && len(s.joins) > 0 {
 		for _, join := range s.joins {
 			table := join.tableName
-			if s.tableAlias != "" {
+			if join.tableAlias != "" {
 				table = join.tableAlias
 			}
 			if join.tableName != "" {
