@@ -215,10 +215,10 @@ func RowsToStruct[T any](rows *sql.Rows) ([]*T, error) {
 		elemValue := elemPtr.Elem()
 
 		scanArgs := make([]any, len(columns))
-		// for i := range scanArgs {
-		// 	var temp interface{}
-		// 	scanArgs[i] = &temp
-		// }
+		for i := range scanArgs {
+			var temp interface{}
+			scanArgs[i] = &temp
+		}
 
 		for columnName, colIndex := range fieldToColIndex {
 			field := elemValue.FieldByName(columnName)
