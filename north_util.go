@@ -215,10 +215,10 @@ func RowsToStruct[T any](rows *sql.Rows) ([]*T, error) {
 		elemValue := elemPtr.Elem()
 
 		scanArgs := make([]any, len(columns))
-		for i := range scanArgs {
-			var temp interface{}
-			scanArgs[i] = &temp
-		}
+		// for i := range scanArgs {
+		// 	var temp interface{}
+		// 	scanArgs[i] = &temp
+		// }
 
 		for columnName, colIndex := range fieldToColIndex {
 			field := elemValue.FieldByName(columnName)
@@ -252,7 +252,7 @@ func getAllFieldToColIndex(structType reflect.Type, columns []string) (map[strin
 			tagValue := field.Tag.Get("orm")
 			if tagValue == columnName {
 				fieldToColIndex[field.Name] = i
-				found = true
+				// found = true
 				return errors.New("found") // 用于退出循环
 			}
 			return nil
@@ -261,7 +261,8 @@ func getAllFieldToColIndex(structType reflect.Type, columns []string) (map[strin
 			return nil, err
 		}
 		if !found {
-			return nil, fmt.Errorf("column %s not found in struct fields", columnName)
+			fmt.Printf("column %s not found in struct fields", columnName)
+			return nil, nil
 		}
 	}
 
