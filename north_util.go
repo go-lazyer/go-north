@@ -260,11 +260,17 @@ func RowsToStructPtrs[T any](rows *sql.Rows) ([]*T, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	for rows.Next() {
 		elemPtr := reflect.New(structType)
 		elemValue := elemPtr.Elem()
 
 		scanArgs := make([]any, len(columns))
+		for i := range scanArgs {
+			var temp interface{}
+			scanArgs[i] = &temp
+		}
+
 		for columnName, colIndex := range fieldToColIndex {
 			field := elemValue.FieldByName(columnName)
 			if !field.IsValid() || !field.CanAddr() {
