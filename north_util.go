@@ -262,7 +262,6 @@ func getAllFieldToColIndex(structType reflect.Type, columns []string) (map[strin
 		}
 		if !found {
 			fmt.Printf("column %s not found in struct fields", columnName)
-			return nil, nil
 		}
 	}
 
