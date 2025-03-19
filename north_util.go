@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"strings"
 )
@@ -220,12 +221,12 @@ func RowsToStruct[T any](rows *sql.Rows) ([]*T, error) {
 			scanArgs[i] = &temp
 		}
 
-		for columnName, colIndex := range fieldToColIndex {
-			field := elemValue.FieldByName(columnName)
+		for fieldName, index := range fieldToColIndex {
+			field := elemValue.FieldByName(fieldName)
 			if !field.IsValid() || !field.CanAddr() {
-				return nil, fmt.Errorf("field %s not found or not addressable in type %T", columnName, elemValue.Interface())
+				return nil, fmt.Errorf("field %s not found or not addressable in type %T", fieldName, elemValue.Interface())
 			}
-			scanArgs[colIndex] = field.Addr().Interface()
+			scanArgs[index] = field.Addr().Interface()
 		}
 
 		if err := rows.Scan(scanArgs...); err != nil {
@@ -242,49 +243,39 @@ func RowsToStruct[T any](rows *sql.Rows) ([]*T, error) {
 	return sliceValue.Interface().([]*T), nil
 }
 
-// 递归获取所有字段及其对应的 orm 标签
+// 获取表字段和 struct 字段的并集
 func getAllFieldToColIndex(structType reflect.Type, columns []string) (map[string]int, error) {
+	fieldMap := forEachField(structType)
 	fieldToColIndex := make(map[string]int)
-
 	for i, columnName := range columns {
-		var found bool
-		err := forEachField(structType, func(field reflect.StructField) error {
-			tagValue := field.Tag.Get("orm")
-			if tagValue == columnName {
-				fieldToColIndex[field.Name] = i
-				// found = true
-				return errors.New("found") // 用于退出循环
-			}
-			return nil
-		})
-		if err != nil && err.Error() != "found" {
-			return nil, err
-		}
-		if !found {
-			fmt.Printf("column %s not found in struct fields", columnName)
+		if fieldName, ok := fieldMap[columnName]; ok {
+			fieldToColIndex[fieldName] = i
+		} else {
+			fmt.Printf("table column %s not found in struct fields\n", columnName)
 		}
 	}
-
 	return fieldToColIndex, nil
 }
 
-// 遍历结构体的所有字段，包括嵌套字段
-func forEachField(structType reflect.Type, fn func(reflect.StructField) error) error {
+// 遍历结构体的所有字段和tag 中的 orm 标签，包括继承的 struct
+func forEachField(structType reflect.Type) map[string]string {
+	fields := make(map[string]string, 0)
+
 	for i := 0; i < structType.NumField(); i++ {
 		field := structType.Field(i)
 		if field.Anonymous && field.Type.Kind() == reflect.Struct {
 			// 如果是嵌套结构体，递归处理
-			if err := forEachField(field.Type, fn); err != nil {
-				return err
-			}
+			maps.Copy(fields, forEachField(field.Type))
 		} else {
-			if err := fn(field); err != nil {
-				return err
+			tagValue := field.Tag.Get("orm")
+			if tagValue != "" {
+				fields[field.Tag.Get("orm")] = field.Name
 			}
 		}
 	}
-	return nil
+	return fields
 }
+
 func prepareConvert(sqlStr, driverName string) string {
 	if driverName == DRIVER_NAME_MYSQL {
 		return strings.ReplaceAll(sqlStr, PLACE_HOLDER_GO, "?")

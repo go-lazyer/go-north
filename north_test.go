@@ -8,18 +8,17 @@ import (
 )
 
 const (
-	USER_ID = "user_id" //
-	DAY     = "day"     //
-	NUM     = "num"     //
+	ID  = "Id"  //
+	DAY = "day" //
+	NUM = "num" //
 )
 
 type Test struct {
-	UserId sql.NullString `orm:"user_id" ` //
-	Day    sql.NullTime   `orm:"day" `     //
-	Num    sql.NullInt64  `orm:"num" `     //
+	Id sql.NullString `orm:"id" ` //
 }
 type Test1 struct {
 	Test
+	Num sql.NullInt64 `orm:"num" ` //
 }
 
 func TestFull(t *testing.T) {
@@ -34,7 +33,7 @@ func TestFull(t *testing.T) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	sql1 := "select * from test t where t.user_id='a'"
+	sql1 := "select * from test t where t.id='a'"
 	params := make([]any, 0)
 	ts, err := Query[Test1](sql1, params, ds)
 	if err != nil {
