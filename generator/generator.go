@@ -453,26 +453,26 @@ func getViewTemplate() string {
 		{{range $field := .Fields}}{{ .FieldName }}  {{ .FieldType }} ` + "`{{ .FieldJsonTag }}`" + ` // {{ .Comment }}
 		{{end}}
 	}
-	func Convert(m *model.{{.TableNameUpperCamel}}Model) *{{.TableNameUpperCamel}}View {
-		return &{{.TableNameUpperCamel}}View{
+	func Convert(m model.{{.TableNameUpperCamel}}Model) {{.TableNameUpperCamel}}View {
+		return {{.TableNameUpperCamel}}View{
 			{{range $field := .Fields}}{{ .FieldName }} : m.{{ .FieldName }}.{{ .FieldNullTypeValue}},
 			{{end}}
 		}
 	}
-	func Converts(models []*model.{{.TableNameUpperCamel}}Model) []*{{.TableNameUpperCamel}}View {
-		views := make([]*{{.TableNameUpperCamel}}View, 0, len(models))
+	func Converts(models []model.{{.TableNameUpperCamel}}Model) []{{.TableNameUpperCamel}}View {
+		views := make([]{{.TableNameUpperCamel}}View, 0, len(models))
 		for _, model := range models {
-			views = append(views, Convert(&model))
+			views = append(views, Convert(model))
 		}
 		return views
 	}
 	
-	func ConvertExtend(m *model.{{.TableNameUpperCamel}}Extend) *{{.TableNameUpperCamel}}View {
-		view := Convert(&m.{{.TableNameUpperCamel}}Model)
+	func ConvertExtend(m model.{{.TableNameUpperCamel}}Extend) {{.TableNameUpperCamel}}View {
+		view := Convert(m.{{.TableNameUpperCamel}}Model)
 		return view
 	}
-	func ConvertExtends(extends []*model.{{.TableNameUpperCamel}}Extend) []*{{.TableNameUpperCamel}}View {
-		views := make([]*{{.TableNameUpperCamel}}View, 0, len(extends))
+	func ConvertExtends(extends []model.{{.TableNameUpperCamel}}Extend) []{{.TableNameUpperCamel}}View {
+		views := make([]{{.TableNameUpperCamel}}View, 0, len(extends))
 		for _, extend := range extends {
 			views = append(views, ConvertExtend(extend))
 		}
@@ -505,7 +505,7 @@ func getDaoTemplate() string {
 		  )
 		  {{ if gt (len .PrimaryKeyFields) 0 -}}
 		  // query first by primaryKey
-		  func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
+		  func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (model.{{.TableNameUpperCamel}}Model, error) {
 			 {{ if eq (len .PrimaryKeyFields) 1 -}} 
 			 query := north.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}})
 			 {{ else -}}
@@ -514,31 +514,31 @@ func getDaoTemplate() string {
 			 gen := north.CreateNorth().Table(model.TABLE_NAME).Where(query)
 			 sqlStr, params, err := gen.SelectSql(true)
 			 if err != nil {
-				return nil,errors.WithStack(err)
+				return model.{{.TableNameUpperCamel}}Model{},errors.WithStack(err)
 			 }
 			 return QueryFirstBySql(sqlStr, params)
 		  }
 		  {{ end -}}
 		  // query first by gen
-		  func QueryFirstByGen(gen  *north.North) (*model.{{.TableNameUpperCamel}}Model, error) {
+		  func QueryFirstByGen(gen  *north.North) (model.{{.TableNameUpperCamel}}Model, error) {
 			 sqlStr, params, err := gen.SelectSql(true)
 			 if err != nil {
-				return nil,errors.WithStack(err)
+				return model.{{.TableNameUpperCamel}}Model{},errors.WithStack(err)
 			 }
 			 return QueryFirstBySql(sqlStr, params)
 		  }
 		  // query first by sql
-		  func QueryFirstBySql(sqlStr string, params []any) (*model.{{.TableNameUpperCamel}}Model, error) {
+		  func QueryFirstBySql(sqlStr string, params []any) (model.{{.TableNameUpperCamel}}Model, error) {
 			 models, err := QueryBySql(sqlStr, params)
  
 			 if len(models) == 0 || err != nil {
-				return nil, errors.WithStack(err)
+				return model.{{.TableNameUpperCamel}}Model{}, errors.WithStack(err)
 			 }
 			 return models[0], nil
 		  }
 		  {{if eq (len .PrimaryKeyFields) 1}} 
 		  // query map by primaryKeys
-		  func QueryMapByPrimaryKeys(primaryKeys []any) (map[{{(index .PrimaryKeyFields 0).FieldType}}]*model.{{.TableNameUpperCamel}}Model, error) {
+		  func QueryMapByPrimaryKeys(primaryKeys []any) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
 			 gen := north.CreateNorth().Table(model.TABLE_NAME).Where(north.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, primaryKeys))
 			 sqlStr, params, err := gen.SelectSql(true)
 			 if err != nil {
@@ -549,7 +549,7 @@ func getDaoTemplate() string {
 		  
 		  
 		  // query map by gen
-		  func QueryMapByGen(gen  *north.North) (map[{{(index .PrimaryKeyFields 0).FieldType}}]*model.{{.TableNameUpperCamel}}Model, error) {
+		  func QueryMapByGen(gen  *north.North) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
 			 sqlStr, params, err := gen.SelectSql(true)
 			 if err != nil {
 				return nil, errors.WithStack(err)
@@ -558,7 +558,7 @@ func getDaoTemplate() string {
 		  }
 		  
 		  // query map by sql
-		  func QueryMapBySql(sqlStr string, params []any) (map[{{(index .PrimaryKeyFields 0).FieldType}}]*model.{{.TableNameUpperCamel}}Model, error) {
+		  func QueryMapBySql(sqlStr string, params []any) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
 			 ds, err := database.DataSource()
 			 if err != nil {
 				return nil, errors.WithStack(err)
@@ -571,7 +571,7 @@ func getDaoTemplate() string {
 			 if len({{.TableNameLowerCamel}}s) == 0 {
 				return nil,nil
 			 }
-			 {{.TableNameLowerCamel}}Map := make(map[{{(index .PrimaryKeyFields 0).FieldType}}]*model.{{.TableNameUpperCamel}}Model, len({{.TableNameLowerCamel}}s))
+			 {{.TableNameLowerCamel}}Map := make(map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, len({{.TableNameLowerCamel}}s))
 			 for _, {{.TableNameLowerCamel}} := range {{.TableNameLowerCamel}}s {
 				new := {{.TableNameLowerCamel}}
 				{{.TableNameLowerCamel}}Map[{{.TableNameLowerCamel}}.{{(index .PrimaryKeyFields 0).FieldName}}.{{(index .PrimaryKeyFields 0).FieldNullTypeValue}}] = new
@@ -602,7 +602,7 @@ func getDaoTemplate() string {
 		  }
  
 		  // query by gen
-		  func QueryByGen(gen  *north.North) ([]*model.{{.TableNameUpperCamel}}Model, error) {
+		  func QueryByGen(gen  *north.North) ([]model.{{.TableNameUpperCamel}}Model, error) {
 			 sqlStr, params, err := gen.SelectSql(true)
 			 if err != nil {
 				return nil,errors.WithStack(err)
@@ -610,7 +610,7 @@ func getDaoTemplate() string {
 			 return QueryBySql(sqlStr, params)
 		  }
 		  // query by sql
-		  func QueryBySql(sqlStr string, params []any) ([]*model.{{.TableNameUpperCamel}}Model, error) {
+		  func QueryBySql(sqlStr string, params []any) ([]model.{{.TableNameUpperCamel}}Model, error) {
 			 ds, err := database.DataSource()
 			 if err != nil {
 				return nil, errors.WithStack(err)
@@ -624,7 +624,7 @@ func getDaoTemplate() string {
  
  
 		  // query extend by gen
-		  func QueryExtendByGen(gen  *north.North) ([]*model.{{.TableNameUpperCamel}}Extend, error) {
+		  func QueryExtendByGen(gen  *north.North) ([]model.{{.TableNameUpperCamel}}Extend, error) {
 			 sqlStr, params, err := gen.SelectSql(true)
 			 if err != nil {
 				return nil,errors.WithStack(err)
@@ -632,7 +632,7 @@ func getDaoTemplate() string {
 			 return QueryExtendBySql(sqlStr, params)
 		  }
 		  // query extend by sql
-		  func QueryExtendBySql(sqlStr string, params []any) ([]*model.{{.TableNameUpperCamel}}Extend, error) {
+		  func QueryExtendBySql(sqlStr string, params []any) ([]model.{{.TableNameUpperCamel}}Extend, error) {
 			 ds, err := database.DataSource()
 			 if err != nil {
 				return nil, errors.WithStack(err)
@@ -644,7 +644,7 @@ func getDaoTemplate() string {
 			 return {{.TableNameLowerCamel}}Extends,nil
 		  }
  
-		  func Insert(m *model.{{.TableNameUpperCamel}}Model) (int64, error) {
+		  func Insert(m model.{{.TableNameUpperCamel}}Model) (int64, error) {
 			 gen := north.CreateNorth().Table(model.TABLE_NAME).Insert(m.ToMap(false))
 			 return InsertByGen(gen)
 		  }
@@ -679,7 +679,7 @@ func getDaoTemplate() string {
 			 return InsertBySql(sqlStr, params)
 		  }
 		  {{ if gt (len .PrimaryKeyFields) 0 -}}
-		  func Update(m *model.{{.TableNameUpperCamel}}Model) (int64, error) {
+		  func Update(m model.{{.TableNameUpperCamel}}Model) (int64, error) {
 			 {{ if eq (len .PrimaryKeyFields) 1 -}} 
 			 query := north.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, m.{{(index .PrimaryKeyFields 0).FieldName}}.{{(index .PrimaryKeyFields 0).FieldNullTypeValue}})
 			 {{ else -}}
@@ -790,16 +790,16 @@ func getServiceTemplate() string {
 			)
 
 			{{ if gt (len .PrimaryKeyFields) 0 -}} 
-			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (*model.{{.TableNameUpperCamel}}Model, error) {
+			func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (model.{{.TableNameUpperCamel}}Model, error) {
 				{{.TableNameLowerCamel}}, err := dao.QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }}   {{end}})
 				if err != nil {
-					return nil,err
+					return model.{{.TableNameUpperCamel}}Model{},err
 				}
 				return {{.TableNameLowerCamel}},nil
 			}
 			{{end}}
 
-			func QueryByParam({{.TableNameLowerCamel}}Param *param.{{.TableNameUpperCamel}}Param) ([]*model.{{.TableNameUpperCamel}}Model, error) {
+			func QueryByParam({{.TableNameLowerCamel}}Param param.{{.TableNameUpperCamel}}Param) ([]model.{{.TableNameUpperCamel}}Model, error) {
 				query := north.NewBoolQuery()
 				gen := north.CreateNorth().PageNum({{.TableNameLowerCamel}}Param.PageNum).PageStart({{.TableNameLowerCamel}}Param.PageStart).PageSize({{.TableNameLowerCamel}}Param.PageSize).Table(model.TABLE_NAME).Where(query)
 				{{.TableNameLowerCamel}}s, err := dao.QueryByGen(gen)

@@ -25,25 +25,25 @@ type Config struct {
 	MaxIdleConns int
 }
 
-func Open(driverName string, dsn string, config *Config) (*DataSource, error) {
+func Open(driverName string, dsn string, config Config) (DataSource, error) {
 	db, err := sql.Open(driverName, dsn)
 	if err != nil {
-		return nil, err
+		return DataSource{}, err
 	}
 	err = db.Ping()
 	if err != nil {
-		return nil, err
+		return DataSource{}, err
 	}
 	db.SetMaxOpenConns(config.MaxOpenConns)
 	db.SetMaxIdleConns(config.MaxIdleConns)
 
-	return &DataSource{
+	return DataSource{
 		Db:         db,
 		DriverName: driverName,
 	}, nil
 }
 
-func Count(sql string, params []any, ds *DataSource) (int64, error) {
+func Count(sql string, params []any, ds DataSource) (int64, error) {
 	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -63,7 +63,7 @@ func Count(sql string, params []any, ds *DataSource) (int64, error) {
 	return count, nil
 }
 
-func PrepareCount(sql string, params []any, ds *DataSource) (int64, error) {
+func PrepareCount(sql string, params []any, ds DataSource) (int64, error) {
 	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -91,7 +91,7 @@ func PrepareCount(sql string, params []any, ds *DataSource) (int64, error) {
 }
 
 // 普通查询
-func Query[T any](sql string, params []any, ds *DataSource) ([]*T, error) {
+func Query[T any](sql string, params []any, ds DataSource) ([]T, error) {
 	if ds.Db == nil {
 		return nil, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -104,7 +104,7 @@ func Query[T any](sql string, params []any, ds *DataSource) ([]*T, error) {
 }
 
 // 预处理查询func RowsToStruct[T any](rows *sql.Rows) ([]T, error) {
-func PrepareQuery[T any](sql string, params []any, ds *DataSource) ([]*T, error) {
+func PrepareQuery[T any](sql string, params []any, ds DataSource) ([]T, error) {
 	if ds.Db == nil {
 		return nil, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -123,7 +123,7 @@ func PrepareQuery[T any](sql string, params []any, ds *DataSource) ([]*T, error)
 }
 
 // 预处理插入 返回批量自增ID
-func PrepareInsert(sql string, params []any, ds *DataSource) (int64, error) {
+func PrepareInsert(sql string, params []any, ds DataSource) (int64, error) {
 	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -144,7 +144,7 @@ func PrepareInsert(sql string, params []any, ds *DataSource) (int64, error) {
 	return id, nil
 }
 
-func PrepareUpdate(sql string, params []any, ds *DataSource) (int64, error) {
+func PrepareUpdate(sql string, params []any, ds DataSource) (int64, error) {
 	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -159,7 +159,7 @@ func PrepareUpdate(sql string, params []any, ds *DataSource) (int64, error) {
 	}
 	return n, nil
 }
-func PrepareSave(sql string, params []any, ds *DataSource) (int64, error) {
+func PrepareSave(sql string, params []any, ds DataSource) (int64, error) {
 	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -174,7 +174,7 @@ func PrepareSave(sql string, params []any, ds *DataSource) (int64, error) {
 	}
 	return n, nil
 }
-func PrepareDelete(sql string, params []any, ds *DataSource) (int64, error) {
+func PrepareDelete(sql string, params []any, ds DataSource) (int64, error) {
 	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
@@ -191,19 +191,23 @@ func PrepareDelete(sql string, params []any, ds *DataSource) (int64, error) {
 }
 
 // 把查询结果映射为实体
-func RowsToStruct[T any](rows *sql.Rows) ([]*T, error) {
+func RowsToStruct[T any](rows *sql.Rows) ([]T, error) {
 	columns, err := rows.Columns()
 	if err != nil {
 		return nil, err
 	}
 
-	sliceType := reflect.SliceOf(reflect.PtrTo(reflect.TypeOf(new(T)).Elem()))
-	sliceValue := reflect.MakeSlice(sliceType, 0, 0)
-
+	// 获取类型 T 的反射信息
 	structType := reflect.TypeOf(new(T)).Elem()
 	if structType.Kind() == reflect.Ptr {
-		return nil, errors.New("struct must be a non-pointer type")
+		return nil, errors.New("t must be a non-pointer type")
 	}
+
+	// 创建值类型的切片（[]T）
+	sliceType := reflect.SliceOf(structType)
+	sliceValue := reflect.MakeSlice(sliceType, 0, 0)
+
+	// 递归获取字段与列的映射（此处省略具体实现）
 
 	// 递归获取所有字段及其对应的 orm 标签
 	fieldToColIndex, err := getAllFieldToColIndex(structType, columns)
@@ -232,15 +236,14 @@ func RowsToStruct[T any](rows *sql.Rows) ([]*T, error) {
 		if err := rows.Scan(scanArgs...); err != nil {
 			return nil, err
 		}
-
-		sliceValue = reflect.Append(sliceValue, elemPtr)
+		sliceValue = reflect.Append(sliceValue, elemValue)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
-	return sliceValue.Interface().([]*T), nil
+	return sliceValue.Interface().([]T), nil
 }
 
 // 获取表字段和 struct 字段的并集
