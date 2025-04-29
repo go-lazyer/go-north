@@ -17,6 +17,7 @@ const (
 
 type DataSource struct {
 	Db           *sql.DB
+	Tx           *sql.Tx
 	DriverName   string
 	DaoFilePaths []string
 }
@@ -47,6 +48,7 @@ func Count(sql string, params []any, ds DataSource) (int64, error) {
 	if ds.Db == nil {
 		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
 	}
+	sql = prepareConvert(sql, ds.DriverName)
 	rows, err := ds.Db.Query(sql, params...)
 	if err != nil {
 		return 0, err
@@ -123,12 +125,20 @@ func PrepareQuery[T any](sql string, params []any, ds DataSource) ([]T, error) {
 }
 
 // 预处理插入 返回批量自增ID
-func PrepareInsert(sql string, params []any, ds DataSource) (int64, error) {
-	if ds.Db == nil {
-		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
+func PrepareInsert(sqlStr string, params []any, ds DataSource) (int64, error) {
+	if ds.Db == nil && ds.Tx == nil {
+		return 0, errors.New("db and tx not allowed to be all nil,need to instantiate yourself")
 	}
-	sql = prepareConvert(sql, ds.DriverName)
-	stmt, err := ds.Db.Prepare(sql)
+	sqlStr = prepareConvert(sqlStr, ds.DriverName)
+
+	var stmt *sql.Stmt
+	var err error
+	if ds.Tx != nil {
+		stmt, err = ds.Tx.Prepare(sqlStr)
+	}
+	if ds.Db != nil {
+		stmt, err = ds.Db.Prepare(sqlStr)
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -144,12 +154,29 @@ func PrepareInsert(sql string, params []any, ds DataSource) (int64, error) {
 	return id, nil
 }
 
-func PrepareUpdate(sql string, params []any, ds DataSource) (int64, error) {
-	if ds.Db == nil {
-		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
+func PrepareUpdate(sqlStr string, params []any, ds DataSource) (int64, error) {
+	if ds.Db == nil && ds.Tx == nil {
+		return 0, errors.New("db and tx not allowed to be all nil,need to instantiate yourself")
 	}
-	sql = prepareConvert(sql, ds.DriverName)
-	ret, err := ds.Db.Exec(sql, params...)
+	sqlStr = prepareConvert(sqlStr, ds.DriverName)
+
+	var stmt *sql.Stmt
+	var err error
+	if ds.Tx != nil {
+		stmt, err = ds.Tx.Prepare(sqlStr)
+	}
+	if ds.Db != nil {
+		stmt, err = ds.Db.Prepare(sqlStr)
+	}
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+	ret, err := stmt.Exec(params...)
+
+	if ds.Db != nil {
+		ret, err = ds.Db.Exec(sqlStr, params...)
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -159,27 +186,26 @@ func PrepareUpdate(sql string, params []any, ds DataSource) (int64, error) {
 	}
 	return n, nil
 }
-func PrepareSave(sql string, params []any, ds DataSource) (int64, error) {
-	if ds.Db == nil {
-		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
+func PrepareDelete(sqlStr string, params []any, ds DataSource) (int64, error) {
+	if ds.Db == nil && ds.Tx == nil {
+		return 0, errors.New("db and tx not allowed to be all nil,need to instantiate yourself")
 	}
-	sql = prepareConvert(sql, ds.DriverName)
-	ret, err := ds.Db.Exec(sql, params...)
+	sqlStr = prepareConvert(sqlStr, ds.DriverName)
+
+	var stmt *sql.Stmt
+	var err error
+	if ds.Tx != nil {
+		stmt, err = ds.Tx.Prepare(sqlStr)
+	}
+	if ds.Db != nil {
+		stmt, err = ds.Db.Prepare(sqlStr)
+	}
 	if err != nil {
 		return 0, err
 	}
-	n, err := ret.RowsAffected() // 操作影响的行数
-	if err != nil {
-		return 0, err
-	}
-	return n, nil
-}
-func PrepareDelete(sql string, params []any, ds DataSource) (int64, error) {
-	if ds.Db == nil {
-		return 0, errors.New("db not allowed to be nil,need to instantiate yourself")
-	}
-	sql = prepareConvert(sql, ds.DriverName)
-	ret, err := ds.Db.Exec(sql, params...)
+	defer stmt.Close()
+	ret, err := stmt.Exec(params...)
+
 	if err != nil {
 		return 0, err
 	}
@@ -289,4 +315,21 @@ func prepareConvert(sqlStr, driverName string) string {
 		n = n + 1
 	}
 	return sqlStr
+}
+func (ds DataSource) Transaction(fc func(tx *sql.Tx) error) (err error) {
+	tx, err := ds.Db.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if err = fc(tx); err == nil {
+		return tx.Commit()
+	}
+	return
 }

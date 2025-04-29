@@ -499,36 +499,56 @@ func getDaoTemplate() string {
 		  package dao
 		  
 		  import (
+		  	 "database/sql"
 			 "github.com/go-lazyer/go-north"
 			 "{{.ModelPackagePath}}"
 			 "github.com/pkg/errors"
 		  )
+
+		  // count by gen
+		  func CountByGen(gen  *north.North) (int64, error) {
+			 sqlStr, params, err := gen.CountSql(true)
+			 if err != nil {
+				return 0,errors.WithStack(err)
+			 }
+			 return CountBySql(sqlStr, params)
+			 
+		  }
+		  // count by sql
+		  func CountBySql(sqlStr string, params []any) (int64, error) {
+			 ds, err := database.DataSource()
+			 if err != nil {
+				return 0, errors.WithStack(err)
+			 }
+			 count, err := north.PrepareCount(sqlStr, params, ds)
+			 if err != nil {
+				return 0,errors.WithStack(err)
+			 }
+			 return count,nil
+		  }
+
 		  {{ if gt (len .PrimaryKeyFields) 0 -}}
 		  // query first by primaryKey
-		  func QueryByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (model.{{.TableNameUpperCamel}}Model, error) {
+		  func QuerySingleByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (model.{{.TableNameUpperCamel}}Model, error) {
 			 {{ if eq (len .PrimaryKeyFields) 1 -}} 
 			 query := north.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}})
 			 {{ else -}}
 			 query := north.NewBoolQuery(){{range $field := .PrimaryKeyFields}} .And(north.NewEqualQuery(model.{{ .ColumnNameUpper }}, {{ .ColumnNameLowerCamel }})) {{end}}
 			 {{end}}
 			 gen := north.CreateNorth().Table(model.TABLE_NAME).Where(query)
-			 sqlStr, params, err := gen.SelectSql(true)
-			 if err != nil {
-				return model.{{.TableNameUpperCamel}}Model{},errors.WithStack(err)
-			 }
-			 return QueryFirstBySql(sqlStr, params)
+			 return QuerySingleByGen(gen)
 		  }
 		  {{ end -}}
 		  // query first by gen
-		  func QueryFirstByGen(gen  *north.North) (model.{{.TableNameUpperCamel}}Model, error) {
+		  func QuerySingleByGen(gen  *north.North) (model.{{.TableNameUpperCamel}}Model, error) {
 			 sqlStr, params, err := gen.SelectSql(true)
 			 if err != nil {
 				return model.{{.TableNameUpperCamel}}Model{},errors.WithStack(err)
 			 }
-			 return QueryFirstBySql(sqlStr, params)
+			 return QuerySingleBySql(sqlStr, params)
 		  }
 		  // query first by sql
-		  func QueryFirstBySql(sqlStr string, params []any) (model.{{.TableNameUpperCamel}}Model, error) {
+		  func QuerySingleBySql(sqlStr string, params []any) (model.{{.TableNameUpperCamel}}Model, error) {
 			 models, err := QueryBySql(sqlStr, params)
  
 			 if len(models) == 0 || err != nil {
@@ -547,7 +567,6 @@ func getDaoTemplate() string {
 			 return QueryMapBySql(sqlStr, params)
 		  }
 		  
-		  
 		  // query map by gen
 		  func QueryMapByGen(gen  *north.North) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
 			 sqlStr, params, err := gen.SelectSql(true)
@@ -559,11 +578,7 @@ func getDaoTemplate() string {
 		  
 		  // query map by sql
 		  func QueryMapBySql(sqlStr string, params []any) (map[{{(index .PrimaryKeyFields 0).FieldType}}]model.{{.TableNameUpperCamel}}Model, error) {
-			 ds, err := database.DataSource()
-			 if err != nil {
-				return nil, errors.WithStack(err)
-			 }
-			 {{.TableNameLowerCamel}}s,err := north.PrepareQuery[model.{{.TableNameUpperCamel}}Model](sqlStr, params,ds)
+			 {{.TableNameLowerCamel}}s,err := QueryBySql(sqlStr, params)
 			 if err != nil {
 				return nil,errors.WithStack(err)
 			 }
@@ -579,27 +594,6 @@ func getDaoTemplate() string {
 			 return {{.TableNameLowerCamel}}Map,nil
 		  }
 		  {{end}}
-		  // count by gen
-		  func CountByGen(gen  *north.North) (int64, error) {
-			 sqlStr, params, err := gen.CountSql(true)
-			 if err != nil {
-				return 0,errors.WithStack(err)
-			 }
-			 return CountBySql(sqlStr, params)
-			 
-		  }
-		  // count by gen
-		  func CountBySql(sqlStr string, params []any) (int64, error) {
-			 ds, err := database.DataSource()
-			 if err != nil {
-				return 0, errors.WithStack(err)
-			 }
-			 count, err := north.PrepareCount(sqlStr, params, ds)
-			 if err != nil {
-				return 0,errors.WithStack(err)
-			 }
-			 return count,nil
-		  }
  
 		  // query by gen
 		  func QueryByGen(gen  *north.North) ([]model.{{.TableNameUpperCamel}}Model, error) {
@@ -643,145 +637,199 @@ func getDaoTemplate() string {
 			 }
 			 return {{.TableNameLowerCamel}}Extends,nil
 		  }
- 
-		  func Insert(m model.{{.TableNameUpperCamel}}Model) (int64, error) {
-			 gen := north.CreateNorth().Table(model.TABLE_NAME).Insert(m.ToMap(false))
-			 return InsertByGen(gen)
-		  }
-		  
-		  func InsertByGen(gen  *north.North) (int64, error) {
-			 sqlStr, params, err := gen.InsertSql(true)
-			 if err != nil {
-				return 0, errors.WithStack(err)
-			 }
-			 return InsertBySql(sqlStr, params)
-		  }
-		  
-		  func InsertBySql(sqlStr string, params []any) (int64, error) {
+
+		func Insert(m model.{{.TableNameUpperCamel}}Model) (int64, error) {
+			return InsertTx(m,nil)
+		}
+		
+		//batch insert
+		func InsertByMaps(insertMaps []map[string]any) (int64, error) {
+			return InsertByMapsTx(insertMaps,nil)
+		}
+	
+		func InsertByGen(gen  *north.North) (int64, error) {
+			return InsertByGenTx(gen,nil)
+		}
+			
+		func InsertBySql(sqlStr string, params []any) (int64, error) {
+			return InsertBySqlTx(sqlStr,params,nil)
+		}
+
+		func InsertTx(m model.{{.TableNameUpperCamel}}Model, tx *sql.Tx) (int64, error) {
+			gen := north.CreateNorth().Table(model.TABLE_NAME).Insert(m.ToMap(false))
+			return InsertByGenTx(gen,tx)
+		}
+		
+		//batch insert
+		func InsertByMapsTx(insertMaps []map[string]any, tx *sql.Tx) (int64, error) {
+			gen := north.CreateNorth().Table(model.TABLE_NAME).Inserts(insertMaps)
+			return InsertByGenTx(gen,tx)
+		}
+	
+		func InsertByGenTx(gen  *north.North, tx *sql.Tx) (int64, error) {
+			sqlStr, params, err := gen.InsertSql(true)
+			if err != nil {
+			return 0, errors.WithStack(err)
+			}
+			return InsertBySqlTx(sqlStr, params,tx)
+		}
+			
+		func InsertBySqlTx(sqlStr string, params []any, tx *sql.Tx) (int64, error) {
+			ds, err := database.DataSource()
+			if err != nil {
+			return 0, errors.WithStack(err)
+			}
+			if tx != nil {
+			ds.Tx = tx
+			}
+			id, err := north.PrepareInsert(sqlStr, params,ds)
+			if err != nil {
+			return 0, errors.WithStack(err)
+			}
+			return id, nil
+		}
+
+		{{ if gt (len .PrimaryKeyFields) 0 -}}
+		func Update(m model.{{.TableNameUpperCamel}}Model) (int64, error) {
+			return UpdateTx(m,nil)
+		}
+		{{end}}
+
+		
+		{{ if gt (len .PrimaryKeyFields) 0 -}}
+		// 批量更新，updateMaps中必须包含主键，联合主键的表不适用该方法
+		func UpdateByMaps(updateMaps []map[string]any) (int64, error) {
+			return UpdateByMapsTx(updateMaps,nil)
+		}
+		{{end}}
+		func UpdateByGen(gen  *north.North) (int64, error) {
+			return UpdateByGenTx(gen,nil)
+		}
+		func UpdateBySql(sqlStr string, params []any) (int64, error) {
+			 return UpdateBySqlTx(sqlStr, params,nil)
+		}
+
+		{{ if gt (len .PrimaryKeyFields) 0 -}}
+		func UpdateTx(m model.{{.TableNameUpperCamel}}Model, tx *sql.Tx) (int64, error) {
+			{{ if eq (len .PrimaryKeyFields) 1 -}} 
+			query := north.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, m.{{(index .PrimaryKeyFields 0).FieldName}}.{{(index .PrimaryKeyFields 0).FieldNullTypeValue}})
+			{{ else -}}
+			query := north.NewBoolQuery(){{range $field := .PrimaryKeyFields}} .And(north.NewEqualQuery(model.{{ .ColumnNameUpper }}, m.{{.FieldName}}.{{.FieldNullTypeValue}})) {{end}}
+			{{end -}}
+			gen := north.CreateNorth().Table(model.TABLE_NAME).Update(m.ToMap(false)).Where(query)
+			return UpdateByGenTx(gen,tx)
+		}
+		{{end}}
+
+		
+		{{ if gt (len .PrimaryKeyFields) 0 -}}
+		// 批量更新，updateMaps中必须包含主键，联合主键的表不适用该方法
+		func UpdateByMapsTx(updateMaps []map[string]any, tx *sql.Tx) (int64, error) {
+			if len(updateMaps) == 0 {
+			return 0, nil
+			}
+			ids := make([]any, 0)
+			for _, updateMap := range updateMaps {
+			if value, ok := updateMap[model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}]; ok {
+				ids = append(ids, value)
+			}
+			}
+			if len(ids) == 0 {
+			return 0, errors.New("batch update primary not allowed to be nil")
+			}
+			query := north.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, ids)
+			gen := north.CreateNorth().Primary(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}).Table(model.TABLE_NAME).Where(query).Updates(updateMaps)
+			return UpdateByGenTx(gen,tx)
+		}
+		{{end}}
+
+		func UpdateByGenTx(gen  *north.North, tx *sql.Tx) (int64, error) {
+			sqlStr, params, err := gen.UpdateSql(true)
+			if err != nil {
+			   return 0, errors.WithStack(err)
+			}
+			return UpdateBySqlTx(sqlStr, params,tx)
+		 }
+		func UpdateBySqlTx(sqlStr string, params []any, tx *sql.Tx) (int64, error) {
 			 ds, err := database.DataSource()
 			 if err != nil {
 				return 0, errors.WithStack(err)
 			 }
-			 id, err := north.PrepareInsert(sqlStr, params,ds)
-			 if err != nil {
-				return 0, errors.WithStack(err)
-			 }
-			 return id, nil
-		  }
- 
-		  //batch insert
-		  func InsertByMaps(insertMaps []map[string]any) (int64, error) {
-			 gen := north.CreateNorth().Table(model.TABLE_NAME).Inserts(insertMaps)
-			 sqlStr, params, err := gen.InsertSql(true)
-			 if err != nil {
-				return 0, errors.WithStack(err)
-			 }
-			 return InsertBySql(sqlStr, params)
-		  }
-		  {{ if gt (len .PrimaryKeyFields) 0 -}}
-		  func Update(m model.{{.TableNameUpperCamel}}Model) (int64, error) {
-			 {{ if eq (len .PrimaryKeyFields) 1 -}} 
-			 query := north.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, m.{{(index .PrimaryKeyFields 0).FieldName}}.{{(index .PrimaryKeyFields 0).FieldNullTypeValue}})
-			 {{ else -}}
-			 query := north.NewBoolQuery(){{range $field := .PrimaryKeyFields}} .And(north.NewEqualQuery(model.{{ .ColumnNameUpper }}, m.{{.FieldName}}.{{.FieldNullTypeValue}})) {{end}}
-			 {{end -}}
-			 gen := north.CreateNorth().Table(model.TABLE_NAME).Update(m.ToMap(false)).Where(query)
-			 return UpdateByGen(gen)
-		  }
-		  {{end}}
-		  func UpdateByGen(gen  *north.North) (int64, error) {
-			 sqlStr, params, err := gen.UpdateSql(true)
-			 if err != nil {
-				return 0, errors.WithStack(err)
-			 }
-			 return UpdateBySql(sqlStr, params)
-		  }
-		  
-		  func UpdateBySql(sqlStr string, params []any) (int64, error) {
-			 ds, err := database.DataSource()
-			 if err != nil {
-				return 0, errors.WithStack(err)
+			 if tx != nil {
+				ds.Tx = tx
 			 }
 			 count, err := north.PrepareUpdate(sqlStr, params,ds)
 			 if err != nil {
 				return 0, errors.WithStack(err)
 			 }
 			 return count, nil
-		  }
-		  {{ if gt (len .PrimaryKeyFields) 0 -}}
-		  // 批量更新，updateMaps中必须包含主键，联合主键的表不适应x该方法
-		  func UpdateByMaps(updateMaps []map[string]any) (int64, error) {
-			 if len(updateMaps) == 0 {
-				return 0, nil
-			 }
-			 ids := make([]any, 0)
-			 for _, updateMap := range updateMaps {
-				if value, ok := updateMap[model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}]; ok {
-				   ids = append(ids, value)
-				}
-			 }
-			 if len(ids) == 0 {
-				return 0, errors.New("batch update primary not allowed to be nil")
-			 }
-			 query := north.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, ids)
-			 gen := north.CreateNorth().Primary(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}).Table(model.TABLE_NAME).Where(query).Updates(updateMaps)
-			 sqlStr, params, err := gen.UpdateSql(true)
-			 if err != nil {
-				return 0, errors.WithStack(err)
-			 }
-			 return UpdateBySql(sqlStr, params)
-		  }
-		  {{end}}
-		  
-		  {{ if gt (len .PrimaryKeyFields) 0 -}}
-		  func DeleteByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (int64, error) {
-			 {{ if eq (len .PrimaryKeyFields) 1 -}} 
-			 gen := north.CreateNorth().Table(model.TABLE_NAME).Where(north.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}}))
-			 {{ else -}}
-			 query := north.NewBoolQuery(){{range $field := .PrimaryKeyFields}} .And(north.NewEqualQuery(model.{{ .ColumnNameUpper }}, {{ .ColumnNameLowerCamel }})) {{end}}
-			 gen := north.CreateNorth().Table(model.TABLE_NAME).Where(query)
-			 {{ end -}}
-			 sqlStr, params, err := gen.DeleteSql(true)
-			 if err != nil {
-				return 0, errors.WithStack(err)
-			 }
-			 return DeleteBySql(sqlStr, params)
-		  }
-		  {{ end -}}
-		  {{ if gt (len .PrimaryKeyFields) 0 -}}
-		  func DeleteByPrimaryKeys(primaryKeys []any) (int64, error) {
-			 gen := north.CreateNorth().Table(model.TABLE_NAME).Where(north.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, primaryKeys))
-			 sqlStr, params, err := gen.DeleteSql(true)
-			 if err != nil {
-				return 0, errors.WithStack(err)
-			 }
-			 return DeleteBySql(sqlStr, params)
-		  }
-		  {{ end -}}
-		  func DeleteByGen(gen  *north.North) (int64, error) {
-			 sqlStr, params, err := gen.DeleteSql(true)
-			 if err != nil {
-				return 0, errors.WithStack(err)
-			 }
-			 return DeleteBySql(sqlStr, params)
-		  }
-		  func DeleteBySql(sqlStr string, params []any) (int64, error) {
-			 ds, err := database.DataSource()
-			 if err != nil {
-				return 0, errors.WithStack(err)
-			 }
-			 count, err := north.PrepareDelete(sqlStr, params,ds)
-			 if err != nil {
-				return 0, errors.WithStack(err)
-			 }
-			 return count, nil
-		  }`
+		}
+
+		{{ if gt (len .PrimaryKeyFields) 0 -}}
+		func DeleteByPrimaryKey({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}) (int64, error) {
+			return DeleteByPrimaryKeyTx({{range $i,$field := .PrimaryKeyFields}} {{ .ColumnNameLowerCamel }},{{end}} nil)
+		}
+		{{ end -}}
+		{{ if eq (len .PrimaryKeyFields) 1 -}}
+		func DeleteByPrimaryKeys(primaryKeys []any) (int64, error) {
+			return DeleteByPrimaryKeysTx(primaryKeys,nil)
+		}
+		{{ end -}}
+		func DeleteByGen(gen  *north.North) (int64, error) {
+			return DeleteByGenTx(gen, nil)
+		}
+		func DeleteBySql(sqlStr string, params []any) (int64, error) {
+			return DeleteBySqlTx( sqlStr, params,nil)
+		}
+		
+		{{ if gt (len .PrimaryKeyFields) 0 -}}
+		func DeleteByPrimaryKeyTx({{range $i,$field := .PrimaryKeyFields}} {{if ne $i 0}},{{end}}{{ .ColumnNameLowerCamel }} any  {{end}}, tx *sql.Tx) (int64, error) {
+			{{ if eq (len .PrimaryKeyFields) 1 -}} 
+			gen := north.CreateNorth().Table(model.TABLE_NAME).Where(north.NewEqualQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, {{(index .PrimaryKeyFields 0).ColumnNameLowerCamel}}))
+			{{ else -}}
+			query := north.NewBoolQuery(){{range $field := .PrimaryKeyFields}} .And(north.NewEqualQuery(model.{{ .ColumnNameUpper }}, {{ .ColumnNameLowerCamel }})) {{end}}
+			gen := north.CreateNorth().Table(model.TABLE_NAME).Where(query)
+			{{ end -}}
+			return DeleteByGenTx(gen,tx)
+		}
+		{{ end -}}
+		{{ if eq (len .PrimaryKeyFields) 1 -}}
+		func DeleteByPrimaryKeysTx(primaryKeys []any, tx *sql.Tx) (int64, error) {
+			gen := north.CreateNorth().Table(model.TABLE_NAME).Where(north.NewInQuery(model.{{(index .PrimaryKeyFields 0).ColumnNameUpper}}, primaryKeys))
+			return DeleteByGenTx(gen,tx)
+		}
+		{{ end -}}
+		func DeleteByGenTx(gen  *north.North, tx *sql.Tx) (int64, error) {
+			sqlStr, params, err := gen.DeleteSql(true)
+			if err != nil {
+			return 0, errors.WithStack(err)
+			}
+			return DeleteBySqlTx(sqlStr, params,tx)
+		}
+		func DeleteBySqlTx(sqlStr string, params []any, tx *sql.Tx) (int64, error) {
+			ds, err := database.DataSource()
+			if err != nil {
+			return 0, errors.WithStack(err)
+			}
+			if tx != nil {
+			ds.Tx = tx
+			}
+			count, err := north.PrepareDelete(sqlStr, params,ds)
+			if err != nil {
+			return 0, errors.WithStack(err)
+			}
+			return count, nil
+		}
+		func GetDataSource() (north.DataSource, error) {
+			return database.DataSource()
+		}`
 }
 func getServiceTemplate() string {
 	return `// Create by code north  {{.CreateTime}}
 			package service
 
 			import (
+			
 				"{{.DaoPackagePath}}"
 				"{{.ModelPackagePath}}"
 				"{{.ParamPackagePath}}"
